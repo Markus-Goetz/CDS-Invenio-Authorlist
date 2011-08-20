@@ -25,29 +25,29 @@
 
 // Defines the different actions performed by AJAX calls
 var gActionTypes = {
-	testSearch : "testSearch",
-	displayDetailedRecord : "displayDetailedRecord",
-	previewResults : "previewResults",
-	displayDetailedResult : "displayDetailedResult",
-	submitChanges : "submitChanges"
+ testSearch : "testSearch",
+ displayDetailedRecord : "displayDetailedRecord",
+ previewResults : "previewResults",
+ displayDetailedResult : "displayDetailedResult",
+ submitChanges : "submitChanges"
 };
 
 // Defines the different output formats of the results
 var gOutputFormatTypes = {
-	bibTeX : "hx",
-	marcXML : "xm",
-	nlm : "xn",
-	htmlBrief : "hb",
-	htmlDetailed : "hd",
-	marc : "hm"
+ bibTeX : "hx",
+ marcXML : "xm",
+ nlm : "xn",
+ htmlBrief : "hb",
+ htmlDetailed : "hd",
+ marc : "hm"
 };
 
 // Defines different types of commands for manipulation of records
 var gCommandTypes = {
-	replaceTextInField : "replaceTextInField",
-	replaceFieldContent : "replaceFieldContent",
-	deleteField : "deleteField",
-	addField : "addField"
+ replaceTextInField : "replaceTextInField",
+ replaceFieldContent : "replaceFieldContent",
+ deleteField : "deleteField",
+ addField : "addField"
 };
 
 // current action
@@ -89,143 +89,143 @@ var gFieldActionTypes = {
 };
 
 function updateView() {
-	$("#displayTemplates").hide();
+ $("#displayTemplates").hide();
         $('#buttonSubmitChanges').attr('disabled', 'true').addClass('buttonDisabled');
 }
 
 function createCommandsList(){
-	/*
-	 * Creates structure with information about the commands
-	 */
-	var commands = Array();
+ /*
+  * Creates structure with information about the commands
+  */
+ var commands = Array();
 
-	var fieldID = "";
-	for (fieldID in gFields) {
-		var currentField = gFields[fieldID];
+ var fieldID = "";
+ for (fieldID in gFields) {
+  var currentField = gFields[fieldID];
 
-		subfieldsList = Array();
-		subfields = currentField.subfields;
-		var subfieldID = "";
-		for (subfieldID in subfields) {
+  subfieldsList = Array();
+  subfields = currentField.subfields;
+  var subfieldID = "";
+  for (subfieldID in subfields) {
                     currentSubfield = subfields[subfieldID];
                     if (currentSubfield != "None")
                         subfieldsList.push(currentSubfield);
-		}
+  }
 
-		var field = {
-	        tag : currentField.tag,
-	        ind1 : currentField.ind1,
-	        ind2 : currentField.ind2,
-	        action : currentField.action,
+  var field = {
+         tag : currentField.tag,
+         ind1 : currentField.ind1,
+         ind2 : currentField.ind2,
+         action : currentField.action,
                 condition : currentField.condition,
                 conditionSubfield : currentField.conditionSubfield,
                 conditionSubfieldExactMatch: currentField.conditionSubfieldExactMatch,
-	        subfields : subfieldsList
-		};
+         subfields : subfieldsList
+  };
 
-		commands.push(field);
-	}
+  commands.push(field);
+ }
 
-	return commands;
+ return commands;
 }
 
 // Page in results preview
 function onButtonGoToFirstPageClick(){
-	gPageToDiplay = 1;
-	performAJAXRequest();
+ gPageToDiplay = 1;
+ performAJAXRequest();
 }
 function onButtonGoToPreviousPageClick(){
-	gPageToDiplay--;
-	performAJAXRequest();
+ gPageToDiplay--;
+ performAJAXRequest();
 }
 function onButtonGoToNextPageClick(){
-	gPageToDiplay++;
-	performAJAXRequest();
+ gPageToDiplay++;
+ performAJAXRequest();
 }
 
 function onButtonOutputFormatMarcXMLClick(){
-	setOutputFormat(gOutputFormatTypes.marcXML);
+ setOutputFormat(gOutputFormatTypes.marcXML);
 }
 function onButtonOutputFormatHTMLBriefClick(){
-	setOutputFormat(gOutputFormatTypes.htmlBrief);
+ setOutputFormat(gOutputFormatTypes.htmlBrief);
 }
 function onButtonOutputFormatHTMLDetailedClick(){
-	setOutputFormat(gOutputFormatTypes.htmlDetailed);
+ setOutputFormat(gOutputFormatTypes.htmlDetailed);
 }
 function onButtonOutputFormatMARCClick(){
-	setOutputFormat(gOutputFormatTypes.marc);
+ setOutputFormat(gOutputFormatTypes.marc);
 }
 
 function onButtonTestSearchClick() {
-	/*
-	 * Displays preview of the results of the search
-	 */
-	gActionToPerform = gActionTypes.testSearch;
-	gOutputFormat = gOutputFormatPreview;
-	gPageToDiplay = 1;
-	performAJAXRequest();
+ /*
+  * Displays preview of the results of the search
+  */
+ gActionToPerform = gActionTypes.testSearch;
+ gOutputFormat = gOutputFormatPreview;
+ gPageToDiplay = 1;
+ performAJAXRequest();
         $('#buttonSubmitChanges').attr('disabled', 'true').addClass('buttonDisabled');
 }
 
 function onButtonPreviewResultsClick() {
-	/*
-	 * Displays preview of the results of the search All the changes defined
-	 * with the commands are reflected in the results
-	 */
-	gActionToPerform = gActionTypes.previewResults;
-	gOutputFormat = gOutputFormatPreview;
-	gPageToDiplay = 1;
+ /*
+  * Displays preview of the results of the search All the changes defined
+  * with the commands are reflected in the results
+  */
+ gActionToPerform = gActionTypes.previewResults;
+ gOutputFormat = gOutputFormatPreview;
+ gPageToDiplay = 1;
         gComputeModifications = 1;
-	performAJAXRequest();
+ performAJAXRequest();
         $('#buttonSubmitChanges').removeAttr('disabled').removeClass('buttonDisabled');
 }
 
 function onButtonBackToResultsClick() {
-	/*
-	 * Brings back the user to the results list
-	 */
-	if (gActionToPerform == gActionTypes.displayDetailedRecord) {
-		onButtonTestSearchClick();
-	} else {
-		onButtonPreviewResultsClick();
-	}
+ /*
+  * Brings back the user to the results list
+  */
+ if (gActionToPerform == gActionTypes.displayDetailedRecord) {
+  onButtonTestSearchClick();
+ } else {
+  onButtonPreviewResultsClick();
+ }
 }
 
 function onButtonGoToNextPageClick(){
-	gPageToDiplay++;
-	performAJAXRequest();
+ gPageToDiplay++;
+ performAJAXRequest();
 }
 
 function onButtonSubmitChangesClick(){
-	/*
-	 * Submits changes defined by user
-	 */
-	var confirmation = confirm('Are you sure you want to submit the changes?');
-	if (confirmation == true) {
-		gActionToPerform = gActionTypes.submitChanges;
-		performAJAXRequest();
-	}
+ /*
+  * Submits changes defined by user
+  */
+ var confirmation = confirm('Are you sure you want to submit the changes?');
+ if (confirmation == true) {
+  gActionToPerform = gActionTypes.submitChanges;
+  performAJAXRequest();
+ }
 }
 
 function rebindControls() {
-	/*
-	 * Binds controls with the appropriate events
-	 */
+ /*
+  * Binds controls with the appropriate events
+  */
 
-	rebindActionsRelatedControls();
-	initTextBoxes();
+ rebindActionsRelatedControls();
+ initTextBoxes();
 
         $("#buttonTestSearch").live("click", onButtonTestSearchClick);
-	$("#buttonPreviewResults").live("click", onButtonPreviewResultsClick);
-	$("#buttonSubmitChanges").live("click", onButtonSubmitChangesClick);
-	$(".buttonBackToResults").live("click", onButtonBackToResultsClick);
-	$(".buttonOutputFormatMarcXML").live("click", onButtonOutputFormatMarcXMLClick);
-	$(".buttonOutputFormatHTMLBrief").live("click", onButtonOutputFormatHTMLBriefClick);
-	$(".buttonOutputFormatHTMLDetailed").live("click", onButtonOutputFormatHTMLDetailedClick);
-	$(".buttonOutputFormatMARC").live("click", onButtonOutputFormatMARCClick);
+ $("#buttonPreviewResults").live("click", onButtonPreviewResultsClick);
+ $("#buttonSubmitChanges").live("click", onButtonSubmitChangesClick);
+ $(".buttonBackToResults").live("click", onButtonBackToResultsClick);
+ $(".buttonOutputFormatMarcXML").live("click", onButtonOutputFormatMarcXMLClick);
+ $(".buttonOutputFormatHTMLBrief").live("click", onButtonOutputFormatHTMLBriefClick);
+ $(".buttonOutputFormatHTMLDetailed").live("click", onButtonOutputFormatHTMLDetailedClick);
+ $(".buttonOutputFormatMARC").live("click", onButtonOutputFormatMARCClick);
         $(".buttonGoToFirstPage").live("click", onButtonGoToFirstPageClick);
-	$(".buttonGoToPreviousPage").live("click", onButtonGoToPreviousPageClick);
-	$(".buttonGoToNextPage").live("click", onButtonGoToNextPageClick);
+ $(".buttonGoToPreviousPage").live("click", onButtonGoToPreviousPageClick);
+ $(".buttonGoToNextPage").live("click", onButtonGoToNextPageClick);
 }
 
 function onAjaxSuccess(json) {
@@ -245,89 +245,89 @@ function displayError(msg) {
 }
 
 function createJSONData() {
-	/*
-	 * Gathers the necessary data and creates a JSON structure that can be used
-	 * with the AJAX requests
-	 */
+ /*
+  * Gathers the necessary data and creates a JSON structure that can be used
+  * with the AJAX requests
+  */
 
-	var searchCriteria = $("#textBoxSearchCriteria").val();
-	var outputTags = $("#textBoxOutputTags").val();
-	var language = $("#language").val();
-	var actionType = gActionToPerform;
-	var currentRecordID = gCurrentRecordID;
-	var outputFormat = gOutputFormat;
-	var pageToDisplay = gPageToDiplay;
+ var searchCriteria = $("#textBoxSearchCriteria").val();
+ var outputTags = $("#textBoxOutputTags").val();
+ var language = $("#language").val();
+ var actionType = gActionToPerform;
+ var currentRecordID = gCurrentRecordID;
+ var outputFormat = gOutputFormat;
+ var pageToDisplay = gPageToDiplay;
         var collection = $("#collection").val();
-	var commands = createCommandsList();
+ var commands = createCommandsList();
         var compute_modifications = gComputeModifications;
 
-	var data = {
-		language : language,
-		searchCriteria : searchCriteria,
-		outputTags : outputTags,
-		actionType : actionType,
-		currentRecordID : currentRecordID,
-		commands : commands,
-		outputFormat : outputFormat,
-		pageToDisplay : pageToDisplay,
-		collection : collection,
+ var data = {
+  language : language,
+  searchCriteria : searchCriteria,
+  outputTags : outputTags,
+  actionType : actionType,
+  currentRecordID : currentRecordID,
+  commands : commands,
+  outputFormat : outputFormat,
+  pageToDisplay : pageToDisplay,
+  collection : collection,
                 compute_modifications : compute_modifications
-	};
+ };
 
-	return JSON.stringify(data);
+ return JSON.stringify(data);
 }
 
 
 function onRequestError(XMLHttpRequest, textStatus, errorThrown) {
-	/*
-	 * Handle AJAX request errors.
-	 */
-	// FIXME: Change this method. At least strings should be localazed.
-	// It is better if the message is more friendly and displayed in a
-	// better way
-	// alert('Request completed with status ' + textStatus + '\nResult: '
-	// + XMLHttpRequest.responseText + '\nError: ' + errorThrown);
-	error_message = 'Request completed with status ' + textStatus +
-			'\nResult: ' + XMLHttpRequest.responseText + '\nError: ' + errorThrown;
+ /*
+  * Handle AJAX request errors.
+  */
+ // FIXME: Change this method. At least strings should be localazed.
+ // It is better if the message is more friendly and displayed in a
+ // better way
+ // alert('Request completed with status ' + textStatus + '\nResult: '
+ // + XMLHttpRequest.responseText + '\nError: ' + errorThrown);
+ error_message = 'Request completed with status ' + textStatus +
+   '\nResult: ' + XMLHttpRequest.responseText + '\nError: ' + errorThrown;
 
-	displayError(error_message);
+ displayError(error_message);
 }
 
 function performAJAXRequest() {
-	/*
-	 * Perform an AJAX request
-	 */
+ /*
+  * Perform an AJAX request
+  */
 
-	$.ajax( {
-		cache : false,
-		type : "POST",
-		dataType : "json",
-		data : {
-			jsondata : createJSONData()
-		},
-		success : function(json){
+ $.ajax( {
+  cache : false,
+  type : "POST",
+  dataType : "json",
+  data : {
+   jsondata : createJSONData()
+  },
+  success : function(json){
                       onAjaxSuccess(json);
                     },
-		error : onRequestError
-	});
+  error : onRequestError
+ });
 }
 
 function setOutputFormat(outputFormat){
-	// We have separate format for the preview and detailed view
-	// so we have to set the proper variable depending
-	// what are we currently displaying
-	if (gActionToPerform == gActionTypes.testSearch || gActionToPerform == gActionTypes.previewResults ){
-		gOutputFormatPreview = outputFormat;
-	}
-	else{
-		gOutputFormatDetails = outputFormat;
-	}
+ // We have separate format for the preview and detailed view
+ // so we have to set the proper variable depending
+ // what are we currently displaying
+ if (gActionToPerform == gActionTypes.testSearch || gActionToPerform == gActionTypes.previewResults ){
+  gOutputFormatPreview = outputFormat;
+ }
+ else{
+  gOutputFormatDetails = outputFormat;
+ }
 
-	gOutputFormat = outputFormat;
+ gOutputFormat = outputFormat;
 
-	if (gActionToPerform!=""){
-		performAJAXRequest();
-	}
+ if (gActionToPerform!=""){
+  performAJAXRequest();
+ }
 }
 
 function initTextBoxes(){
@@ -349,8 +349,8 @@ function initTextBoxes(){
 }
 
 $(document).ready( function() {
-	rebindControls();
-	updateView();
+ rebindControls();
+ updateView();
 });
 
 
@@ -476,10 +476,10 @@ function onActOnFieldsRemoveClick() {
 }
 
 function generateFieldDisplayID() {
-	/*
-	 * Returns identifier for field that could be used
-	 * in the html elements
-	 */
+ /*
+  * Returns identifier for field that could be used
+  * in the html elements
+  */
     var fieldDisplayID = gFieldDisplayIDPrefix + "_" +gCurrentFieldID;
     gCurrentFieldID++;
 
@@ -487,10 +487,10 @@ function generateFieldDisplayID() {
 }
 
 function generateSubfieldDisplayID(fieldID, subfieldID) {
-	/*
-	 * Returns identifier for subfield that could be used
-	 * in the html elements
-	 */
+ /*
+  * Returns identifier for subfield that could be used
+  * in the html elements
+  */
     if (subfieldID == null){
         subfieldID = gCurrentSubfieldID;
         gCurrentSubfieldID++;
@@ -875,23 +875,23 @@ function rebindActionsRelatedControls() {
 }
 
 function onSelectOutputFormatChange(value){
-	if (value == "Marc"){
-		setOutputFormat(gOutputFormatTypes.marc);
-	}
-	else{
-		setOutputFormat(gOutputFormatTypes.htmlBrief);
-	}
+ if (value == "Marc"){
+  setOutputFormat(gOutputFormatTypes.marc);
+ }
+ else{
+  setOutputFormat(gOutputFormatTypes.htmlBrief);
+ }
 }
 
 function onEnter(evt){
-	var keyCode = null;
-	if( evt.which ) {
-		keyCode = evt.which;
-	} else if( evt.keyCode ) {
-		keyCode = evt.keyCode;
-	}if( 13 == keyCode ) {
-		onButtonTestSearchClick();
-	}
+ var keyCode = null;
+ if( evt.which ) {
+  keyCode = evt.which;
+ } else if( evt.keyCode ) {
+  keyCode = evt.keyCode;
+ }if( 13 == keyCode ) {
+  onButtonTestSearchClick();
+ }
 }
 
 function onPressEsc(evt){

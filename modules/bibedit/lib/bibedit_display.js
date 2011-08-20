@@ -188,8 +188,8 @@ function createRow(tag, ind1, ind2, subfieldCode, subfieldValue, fieldID,
   cellContentTitle + cellContentOnClick + 'tabindex="0">' + subfieldTagToPrint +
       '</td>' +
       '<td id="content_' + subfieldID + '" class="' + cellContentClass + cellContentAdditionalClass +  '" ' +
-	cellContentTitle + autosuggestkeypress + cellContentOnClick + 'tabindex="0">' +
-	subfieldValue +
+ cellContentTitle + autosuggestkeypress + cellContentOnClick + 'tabindex="0">' +
+ subfieldValue +
       '</td>' +
       '<td class="bibEditCellAddSubfields">' + btnAddSubfield + '</td>' +
       '</tr>';
@@ -571,7 +571,7 @@ function createHoldingPenPanelEntry(changesetNumber, changesetDatetime){
   //informationsSection = "<div class=\"bibeditHPInformationsSection\">" + numberSection + previewSection + datetimeSection  + "</div>";
 
   //return "<div class=\"bibeditHPPanelEntry\" id=\"bibeditHoldingPenPanelEntry_" +
-  //	changesetNumber	 + "\">" + informationsSection + manipulationControlsSection + "</div>";
+  // changesetNumber  + "\">" + informationsSection + manipulationControlsSection + "</div>";
 }
 
 function createGeneralControlsPanel(){
@@ -630,20 +630,20 @@ function createAddFieldForm(fieldTmpNo, fieldTemplateNo){
   return '' +
     '<tbody id="rowGroupAddField_' + fieldTmpNo + '">' +
       '<tr>' +
-	'<td></td>' +
-	'<td><b>New</b></td>' +
-	'<td></td>' +
-	'<td></td>' +
-	'<td><div class="bibEditAddFieldManipulationsBar"><div class="bibEditAddFieldFormSelectTemplate">Add field: ' +
+ '<td></td>' +
+ '<td><b>New</b></td>' +
+ '<td></td>' +
+ '<td></td>' +
+ '<td><div class="bibEditAddFieldManipulationsBar"><div class="bibEditAddFieldFormSelectTemplate">Add field: ' +
     select('selectAddFieldTemplate_' + fieldTmpNo, fieldTemplatesData, fieldTemplateNo) +
     '</div><div class="bibEditAddFieldFormCreateSimilar"> Add ' +
       input('text', 'selectAddFieldTemplateTimes_' + fieldTmpNo, "addFieldAddSimilarInput", {"maxlength" : 4, "size": 1}) +
-	button('similar', 'selectAddSimilarFields_' + fieldTmpNo, "", {}) +
+ button('similar', 'selectAddSimilarFields_' + fieldTmpNo, "", {}) +
         '</div></div></td>' +
-	'<td>' +
+ '<td>' +
         img('/img/add.png', 'btnAddFieldAddSubfield_' + fieldTmpNo, '', {
-	    title: 'Add subfield'}) +
-	'</td>' +
+     title: 'Add subfield'}) +
+ '</td>' +
       '</tr>' +
       createAddFieldRow(fieldTmpNo, 0) +
       // adding a row used to insert at the end without repositioning the tag and indicators
@@ -703,12 +703,12 @@ function createAddFieldRow(fieldTmpNo, subfieldTmpNo, defaultCode, defaultValue)
       '</td>' +
       '<td></td>' +
       '<td class="bibEditCellAddSubfieldCode">' +
-	input('text', 'txtAddFieldSubfieldCode_' + fieldTmpNo + '_' +
-	      subfieldTmpNo, 'bibEditTxtSubfieldCode', {maxlength: 1, value: fieldCode}) +
+ input('text', 'txtAddFieldSubfieldCode_' + fieldTmpNo + '_' +
+       subfieldTmpNo, 'bibEditTxtSubfieldCode', {maxlength: 1, value: fieldCode}) +
       '</td>' +
       '<td>' +
-	input('text', 'txtAddFieldValue_' + fieldTmpNo + '_' +
-	      subfieldTmpNo, 'bibEditTxtValue' + additionalClass, {value : fieldValue}) +
+ input('text', 'txtAddFieldValue_' + fieldTmpNo + '_' +
+       subfieldTmpNo, 'bibEditTxtValue' + additionalClass, {value : fieldValue}) +
       '</td>' +
       '<td>' + btnAddFieldRemove + '</td>' +
     '</tr>';
@@ -744,8 +744,8 @@ function createAddSubfieldsRow(fieldID, subfieldTmpNo, defSubCode, defValue){
       '<td></td>' +
       '<td></td>' +
       '<td class="bibEditCellAddSubfieldCode">' +
-	input('text', 'txtAddSubfieldsCode_' + subfieldID,
-	      'bibEditTxtSubfieldCode', {maxlength: 1},  defSubCode) +
+ input('text', 'txtAddSubfieldsCode_' + subfieldID,
+       'bibEditTxtSubfieldCode', {maxlength: 1},  defSubCode) +
       '</td>' +
       '<td>' +
       input('text', 'txtAddSubfieldsValue_' + subfieldID, 'bibEditTxtValue', {}, defValue) +

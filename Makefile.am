@@ -162,6 +162,8 @@ install-jquery-plugins: install-jquery-plugins
 	wget http://autobahn.tablesorter.com/jquery.tablesorter.zip && \
 	wget http://plugins.jquery.com/files/Uploadify-v2.1.3.zip -O uploadify.zip && \
 	wget http://www.datatables.net/download/build/jquery.dataTables.min.js && \
+	wget http://www.datatables.net/download/build/ColVis.min.js && \
+	mv ColVis.min.js jquery.dataTables.ColVis.min.js && \
 	unzip jquery.tablesorter.zip && \
 	rm jquery.tablesorter.zip && \
 	unzip -u uploadify.zip && \
@@ -228,6 +230,7 @@ uninstall-jquery-plugins:
 	rm -f jquery.ajaxPager.js && \
 	rm -f jquery.form.js && \
 	rm -f jquery.dataTables.min.js && \
+	rm -f jquery.dataTables.ColVis.min.js && \
 	rm -f ui.core.js) && \
 	(cd ${prefix}/var/www/img && \
 	rm -f cancel.png uploadify.css uploadify.swf uploadify.allglyphs.swf uploadify.fla && \

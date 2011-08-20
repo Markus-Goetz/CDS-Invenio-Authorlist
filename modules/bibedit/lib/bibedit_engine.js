@@ -1345,8 +1345,8 @@ function bindNewRecordHandlers(){
       updateStatus('updating');
       var templateNo = this.id.split('_')[1];
       createReq({requestType: 'newRecord', newType: 'template',
-	templateFilename: gRECORD_TEMPLATES[templateNo][0]}, function(json){
-	  getRecord(json['newRecID'], 0, onGetTemplateSuccess); // recRev = 0 -> current revision
+ templateFilename: gRECORD_TEMPLATES[templateNo][0]}, function(json){
+   getRecord(json['newRecID'], 0, onGetTemplateSuccess); // recRev = 0 -> current revision
       });
       event.preventDefault();
     });
@@ -1736,7 +1736,7 @@ function createAddFieldInterface(initialContent, initialTemplateNo){
   $('#txtAddFieldInd1_' + fieldTmpNo).bind('keyup', onAddFieldChange);
   $('#txtAddFieldInd2_' + fieldTmpNo).bind('keyup', onAddFieldChange);
   $('#txtAddFieldSubfieldCode_' + fieldTmpNo + '_0').bind('keyup',
-							  onAddFieldChange);
+         onAddFieldChange);
   $('#txtAddFieldValue_' + fieldTmpNo + '_0').bind('keyup', function (e){
     onAddFieldValueKeyPressed(e, jQRowGroupID, fieldTmpNo, 0);
   });
@@ -1880,24 +1880,24 @@ function onAddFieldChange(event){
       if ($(this).hasClass('bibEditInputError'))
   $(this).removeClass('bibEditInputError');
       if (event.keyCode != 9 && event.keyCode != 16){
-	switch(fieldType){
-	  case 'ControlTag':
-	    $(this).parent().nextAll().eq(3).children('input').focus();
-	    break;
-	  case 'Tag':
-	  case 'Indicator1':
-	    $(this).next().focus();
-	    break;
-	  case 'Indicator2':
+ switch(fieldType){
+   case 'ControlTag':
+     $(this).parent().nextAll().eq(3).children('input').focus();
+     break;
+   case 'Tag':
+   case 'Indicator1':
+     $(this).next().focus();
+     break;
+   case 'Indicator2':
           // in case the indicator is present, we can be sure this is not a control field... so we can safely jump to the subfield code input
           $('#txtAddFieldSubfieldCode_' + fieldTmpNo + '_0')[0].focus();
-	    break;
-	  case 'SubfieldCode':
-	    $(this).parent().next().children('input').focus();
-	    break;
-	  default:
-	    ;
-	}
+     break;
+   case 'SubfieldCode':
+     $(this).parent().next().children('input').focus();
+     break;
+   default:
+     ;
+ }
       }
     }
   }
@@ -1976,7 +1976,7 @@ function addFieldSave(fieldTmpNo)
 
         if (!$(this).hasClass('bibEditInputError')
           && this.value != ''
-	  && !$(txtValue).hasClass('bibEditInputError')
+   && !$(txtValue).hasClass('bibEditInputError')
           && value != ''){
             if (!isStillVolatile){
               subfields.push([this.value, value]);
@@ -2444,7 +2444,7 @@ function onAutosuggest(event) {
   var autosuggest_id = 'autosuggest_'+tmpArray[1]+'_'+tmpArray[2]+'_'+tmpArray[3];
   var select_id = 'select_'+tmpArray[1]+'_'+tmpArray[2]+'_'+tmpArray[3];
   var maintag = tmpArray[1], fieldPosition = tmpArray[2],
-	  subfieldIndex = tmpArray[3];
+   subfieldIndex = tmpArray[3];
   var field = gRecord[maintag][fieldPosition];
   var subfieldcode = field[0][subfieldIndex][0];
   var subtag1 = field[1];

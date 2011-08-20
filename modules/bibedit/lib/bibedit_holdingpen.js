@@ -96,9 +96,9 @@ function holdingPenPanelAddEntry(entry){
 
 function holdingPenPanelSetChanges(data){
   /** Setting the Holding Pen panel content.
-   * 	This function cqn be utilised as a Javascript callback
+   *  This function cqn be utilised as a Javascript callback
    *
-   * 	Parameter:
+   *  Parameter:
    *  data - The dictionary containing a 'changes' key under which, a list
    *         of changes is stored
    */
@@ -179,7 +179,7 @@ function onHoldingPenPreviewDataRetreived(json){
    *           Must contain the following keys:
    *              'record' : a new record value
    *              'changeset_number' : the number of the changeset
-   *              		downloded
+   *                downloded
    */
   changesetNumber = json['changeset_number'];
   record = json['record'];
@@ -303,7 +303,7 @@ function prepareUndoVisualizeChangeset(changesetNumber, changesBefore){
   reColorFields();
   var ajaxData = {
     hpChanges: {
-	toOverride: changesBefore,
+ toOverride: changesBefore,
         changesetsToActivate: [changesetNumber]
       },
     requestType: 'otherUpdateRequest',
@@ -355,7 +355,7 @@ function prepareVisualizeChangeset(changesetNumber, newChangesList, undoHandler)
   /** Makes the retrieved changeset visible in the main BibEdit editor
    *
    * Parameters:
-   * 	changesetNumber: the internal Holding Pen number of the changeset
+   *  changesetNumber: the internal Holding Pen number of the changeset
    *    newRecordData: the value of a record after changing
    *    undoHandler: the handler passed directly throught the AJAX call
    */
@@ -410,7 +410,7 @@ function onHoldingPenChangesetRetrieved(json){
 
 function holdingPenPanelApplyChangeSet(changesNum){
   /** Applies the changeset of given number to the record
-   * 	   (initialises the retrieving if necessary)
+   *     (initialises the retrieving if necessary)
    *
    * applying a changeset consists of adding the proposal
    * buttons in appropriate fields and removing the Holding Pen entry
@@ -966,8 +966,8 @@ function aggregateHoldingPenChanges(){
   /** Fuction aggregating the Holding Pen changes in different catheegories.
       Returns an object with following fuields:
         changesAddModify : a list of numbers of changes of modification or adding fields
-	changesRemoveField : a list of numbers of changes of field removal
-	changesRemoveSubfield : a list of numbers of changes of subfield removal
+ changesRemoveField : a list of numbers of changes of field removal
+ changesRemoveSubfield : a list of numbers of changes of subfield removal
    */
   var result = {};
   result.changesAddModify= [];
@@ -978,7 +978,7 @@ function aggregateHoldingPenChanges(){
     changeNumInt = parseInt(changeNum);
     changeType = gHoldingPenChanges[changeNum].change_type;
     if ( changeType == "field_added" || changeType == "subfield_changed" ||
-	 changeType == "subfield_added" || changeType == "field_changed"){
+  changeType == "subfield_added" || changeType == "field_changed"){
       result.changesAddModify.push(changeNumInt);
     }
     if ( changeType == "field_removed"){
@@ -1031,7 +1031,7 @@ function acceptAddModifyChanges(changeNumbers){
       var modificationUndoHandler = prepareUndoHandlerChangeSubfield(tag,
         fieldPos, sfPos, oldContent, content, sfCode, sfCode);
       var undoHandler = prepareUndoHandlerApplyHPChange(modificationUndoHandler,
-							changeNum);
+       changeNum);
 
       var changeData = prepareSubfieldChangedRequest(changeNum);
       result.ajaxData.push(changeData);
@@ -1216,7 +1216,7 @@ function onAcceptAllChanges(){
   collectiveUndoHandlers.reverse();
 
   var finalUndoHandler = prepareUndoHandlerBulkOperation(collectiveUndoHandlers,
-							 "apply all changes");
+        "apply all changes");
   addUndoOperation(finalUndoHandler);
 
   var optArgs = {
@@ -1237,7 +1237,7 @@ function prepareRemoveAllAppliedChanges(){
   gHoldingPenChanges = [];
   removeAllChangeControls();
   return {recID: gRecID, requestType: "otherUpdateRequest",
-	  hpChanges: {toOverride : []}};
+   hpChanges: {toOverride : []}};
 }
 
 function onRejectAllChanges(){

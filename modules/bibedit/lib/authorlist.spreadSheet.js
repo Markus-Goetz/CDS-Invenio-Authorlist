@@ -401,7 +401,7 @@ SpreadSheet.prototype._fnMakeDataTableSortAscendingCallback = function() {
     var self = this;
 
     return function( a, b ) {
-        return self._fnDataTableSortCompare( a, b );
+        return self._fnDataTableSortCompare( self, a, b );
     }
 }
 
@@ -419,7 +419,7 @@ SpreadSheet.prototype._fnMakeDataTableSortDescendingCallback = function() {
     var self = this;
     
     return function( a, b ) {
-        return self._fnDataTableSortCompare( a, b ) * -1;
+        return self._fnDataTableSortCompare( self, a, b ) * -1;
     }
 }
 
@@ -428,12 +428,13 @@ SpreadSheet.prototype._fnMakeDataTableSortDescendingCallback = function() {
 * Purpose:	Defines the sorting function for ascending ordering of the table. Distinguishes between the supported
 			input types of the SpreadSheet and selects and compares their values accordingly. Everything unknown is
 			considered to be equal to every other value.
-* Input(s):	string:a - the raw string content of the cell on the left-hand side of the comparison
+* Input(s):	object:self - reference to the SpreadSheet instance
+            string:a - the raw string content of the cell on the left-hand side of the comparison
 			string:b - the raw string content of the cell on the right-hand side of the comparison
 * Returns:	integer:comparison - a standard javascript return value for sort functions (less than: negative, equal: zero, greater than: positive)
 *
 */
-SpreadSheet.prototype._fnDataTableSortCompare = function( a, b ) {
+SpreadSheet.prototype._fnDataTableSortCompare = function( self, a, b ) {
     var nA = jQuery( a );
 	var nB = jQuery( b );
 	
@@ -446,8 +447,8 @@ SpreadSheet.prototype._fnDataTableSortCompare = function( a, b ) {
 		var right = nB.val();
 		
 	} else if ( nA.is( 'input:checkbox' ) ) {
-		var left = typeof nA.attr( 'checked' ) !== 'undefined' ? 'on' : 'off';
-		var right = typeof nB.attr( 'checked' ) !== 'undefined' ? 'on' : 'off';
+		var left = self._fnChecked( nA );
+		var right = self._fnChecked( nB );
 		
 	} else if ( nX.is( 'select' ) ) {
 		var left = nA.children( 'option:selected' ).val();
@@ -467,31 +468,36 @@ SpreadSheet.prototype._fnDataTableSortCompare = function( a, b ) {
 *
 */
 SpreadSheet.prototype._fnRegisterDataTableFiltering = function() {
-	jQuery.fn.dataTableExt.ofnSearch[SpreadSheet._oCss.SpreadSheet] = this._fnDataTableFiltering;
+	jQuery.fn.dataTableExt.ofnSearch[SpreadSheet._oCss.SpreadSheet] = this._fnMakeDataTableFilteringCallback();
 }
 
 /*
-* Function:	_fnDataTableFiltering
-* Purpose:	Defines how to extract a canonical (normalized) content of a cell from its wrapping HTML input tags.
-			This is done only for every currently supported type of SpreadSheet. Everything is considered to be
-			not normalizable - i.e. empty string.
-* Input(s):	string:sData - raw string content of a cell
-* Returns:	string:canonicalValue - the canonical (normalized) content of the cell - i.e. stripped from wrapping HTML code.
+* Function:	_fnMakeDataTableFilteringCallback
+* Purpose:	Defines a callback on how to extract a canonical (normalized) content of a cell from its wrapping 
+			HTML input tags. This is done only for every currently supported type of SpreadSheet. Everything 
+			is considered to be not normalizable - i.e. empty string.
+* Input(s):	void
+* Returns:	function:callback - callback that returns the canonical (normalized) content of the cell - i.e. 
+*                               stripped from wrapping HTML code.
 *
 */
-SpreadSheet.prototype._fnDataTableFiltering = function( sData ) {
-	var nData = jQuery( sData );
+SpreadSheet.prototype._fnMakeDataTableFilteringCallback = function() {
+    var self = this;
+
+    return function( sData ) {
+	    var nData = jQuery( sData );
 	
-	if ( nData.is( 'input:text' ) ) {
-		return nData.val();
+	    if ( nData.is( 'input:text' ) ) {
+		    return nData.val();
 		
-	} else if ( nData.is( 'input:checkbox' ) ) {
-		return typeof nData.attr( 'checked' ) !== 'undefined' ? 'on' : 'off';
+	    } else if ( nData.is( 'input:checkbox' ) ) {
+		    return self._fnChecked( nData );
 		
-	} else if ( nData.is( 'select' ) ) {
-		return nData.children( 'option:selected' ).val();
+	    } else if ( nData.is( 'select' ) ) {
+		    return nData.children( 'option:selected' ).val();
+	    }
+	    return '';
 	}
-	return '';
 }
 
 /*
@@ -1388,15 +1394,16 @@ SpreadSheet.prototype._fnUnwrapTable = function( aasTable ) {
 
 /*
 * Function:	_fnUnwrapRow
-* Purpose:	Removes the input/selection tags from a given row for each individual cell
+* Purpose:	Removes the input/selection tags from a given row for each individual cell and stores the value in an 
+            object under the respective column name where it was read from
 * Input(s): string array:asCells - the row as an array as given for instance by this._oDataTable.fnGetData( index )
-* Returns:	string array:row - the unwrapped row content
+* Returns:	object:row - the unwrapped row content
 *
 */
 SpreadSheet.prototype._fnUnwrapRow = function( asCells ) {
-	var row = [];
+	var row = {};
 	for ( var i = 0, iLen = asCells.length; i < iLen; i++ ) {
-		row.push( this._fnUnwrapCell( asCells[i] ) );
+		row[ this._asColumnNames[i] ] =  this._fnUnwrapCell( asCells[i] ) );
 	}
 	return row;
 }
@@ -1416,10 +1423,22 @@ SpreadSheet.prototype._fnUnwrapCell = function( sCell ) {
 	if ( nCell.is( 'input:text' ) ) {
 		return nCell.val()
 	} else if ( nCell.is( 'input:checkbox' ) ) {
-		return typeof nCell.attr( 'checked' ) !== 'undefined' ? 'on' : 'off';
+		return this.fnChecked( nCell );
 	} else if ( nCell.is( 'select' ) ) {
 		return nCell.children( 'option:selected' ).val();
 	} else {
 		return null;
 	}
+}
+
+/*
+* Function:	_fnChecked
+* Purpose:	Checks whether the given node (mainly intended for checkboxes) has an attribute
+            checked set and returns a string true if so otherwise false
+* Input(s): node:nCheckbox - the node to be checked
+* Returns:	string:checked - string indicating checked status
+*
+*/
+SpreadSheet.prototype._fnChecked = function( nCheckbox ) {
+    return typeof nCheckbox.attr( 'checked' ) !== 'undefined' ? 'true' : 'false';
 }

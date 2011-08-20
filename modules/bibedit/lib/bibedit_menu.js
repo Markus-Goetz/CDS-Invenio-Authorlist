@@ -74,9 +74,9 @@ function expandMenuSection(){
   parent.closest('.bibEditMenuSection').find('.bibEditMenuMore').show();
 
   $(this).replaceWith(img('/img/bullet_toggle_minus.png', '',
-			  'bibEditImgCompressMenuSection'));
+     'bibEditImgCompressMenuSection'));
   parent.find('.bibEditImgCompressMenuSection').bind('click',
-						     compressMenuSection);
+           compressMenuSection);
 }
 
 function compressMenuSection(){
@@ -87,7 +87,7 @@ function compressMenuSection(){
   parent.closest('.bibEditMenuSection').find('.bibEditMenuMore').hide();
 
   $(this).replaceWith(img('/img/bullet_toggle_plus.png', '',
-			  'bibEditImgExpandMenuSection'));
+     'bibEditImgExpandMenuSection'));
   parent.find('.bibEditImgExpandMenuSection').bind('click', expandMenuSection);
 }
 
@@ -150,8 +150,8 @@ function onSearchClick(event){
     if (gRecordDirty && gReadOnlyMode == false){
       // Warn of unsubmitted changes.
       if (!displayAlert('confirmLeavingChangedRecord')){
-	updateStatus('ready');
-	return;
+ updateStatus('ready');
+ return;
       }
     }
     else if (gRecID && gReadOnlyMode == false)
@@ -185,8 +185,8 @@ function onSearchClick(event){
     if (gRecordDirty){
       // Warn of unsubmitted changes.
       if (!displayAlert('confirmLeavingChangedRecord')){
-	updateStatus('ready');
-	return;
+ updateStatus('ready');
+ return;
       }
     }
     else if (gRecID)
@@ -284,7 +284,7 @@ function onGetTicketsSuccess(json){
     $('#tickets').html(tickets);
     $('#lnkNewTicket').bind('click', function(event){
       setTimeout('createReq({recID: gRecID, requestType: "getTickets"},' +
-		 'onGetTicketsSuccess)', gTICKET_REFRESH_DELAY);
+   'onGetTicketsSuccess)', gTICKET_REFRESH_DELAY);
     });
   }
 }
@@ -294,7 +294,7 @@ function updateStatus(statusType, reporttext){
    * Update status (in the bottom of the menu).
    */
   var image, text;
-	gCurrentStatus = statusType;
+ gCurrentStatus = statusType;
   switch (statusType){
     case 'ready':
       image = img('/img/circle_green.png');
@@ -310,7 +310,7 @@ function updateStatus(statusType, reporttext){
       text = reporttext;
       clearTimeout(updateStatus.statusResetTimerID);
       updateStatus.statusResetTimerID = setTimeout('updateStatus("ready")',
-				  gSTATUS_INFO_TIME);
+      gSTATUS_INFO_TIME);
       break;
     case 'error':
       updateToolbar(false);
@@ -318,7 +318,7 @@ function updateStatus(statusType, reporttext){
       text = reporttext;
       clearTimeout(updateStatus.statusResetTimerID);
       updateStatus.statusResetTimerID = setTimeout('updateStatus("ready")',
-				  gSTATUS_ERROR_TIME);
+      gSTATUS_ERROR_TIME);
       break;
     default:
       image = '';
