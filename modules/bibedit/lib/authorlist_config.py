@@ -3,7 +3,7 @@ UNDEFINED = 'UNDEFINED'
 class Resources:
     STYLESHEETS = ['authorlist.dataTable.css',
                    'authorlist.dataTable.jquery-ui.css',
-                   'jquery-ui/themes/smoothness/ui.theme.css',
+                   'jquery-ui/themes/smoothness/jquery-ui.css',
                    'authorlist.colVis.css',
                    'authorlist.spreadSheet.css']
 

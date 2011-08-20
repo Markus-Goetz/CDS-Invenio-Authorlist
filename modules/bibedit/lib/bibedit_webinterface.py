@@ -221,11 +221,18 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
-        reqPrint = str(req).replace('\n', '<br>' )
+        metaheader = authorlist_templates.metaheader()
+        metaheader += """<script type="text/javascript">
+                          jQuery( document).ready( function() {
+                            var authorlist = new Authorlist( 'authorlist' );
+                          });
+                       </script>"""
+                       
+        body = '<div id="authorlist"></div>'
     
         return page(title         = _('Author list'),
-                    metaheaderadd = authorlist_templates.metaheader(),
-                    body          = _('REQ: ' + reqPrint + '<br><br>FORM: ' + str(form) + '<br><br>ARGD: ' + str(argd)),
+                    metaheaderadd = metaheader,
+                    body          = body,
                     errors        = [],
                     warnings      = [],
                     uid           = getUid(req),
