@@ -1,0 +1,56 @@
+.SpreadSheet {
+	font-family : 'Trebuchet MS', Helvetica, sans-serif;
+	font-size : 1em;
+}
+
+table.SpreadSheet {
+	border-spacing : 0px;
+	border-collapse : collapse;
+}
+
+/* TODO: Revise this rule - maybe table.SpreadSheet...*/
+td {
+	padding : 0px !important;
+}
+
+div.SpreadSheet.Edit {
+	margin-left : auto;
+	margin-right : auto;
+	width: 48px;
+}
+
+input.SpreadSheet {
+	width : 100%;
+	text-align : right;
+	margin : 0px;
+	padding : 0px 8px;
+	
+}
+
+input.SpreadSheet.ReadOnly {
+	background-color : transparent;
+	border-color : transparent;
+}
+
+
+input.SpreadSheet.Increment {
+	width : 50px;
+}
+
+select.SpreadSheet {
+	width : 100%;
+	margin : 0px;
+	border-color : #AFAFAF;
+}
+
+span.SpreadSheet {
+	float : right;
+}
+
+div.ColVis {
+	width : 15px;
+}
+
+button.ColVis_Button {
+	font : 1em "Trebuchet MS", Helvetica, sans-serif;
+}

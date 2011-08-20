@@ -17,11 +17,18 @@
 
 testdir = $(libdir)/webtest/invenio
 
+imgdir=$(localstatedir)/www/img
+
 test_DATA = test_bibedit_access_curator_coll.html \
             test_bibedit_access_curator_all.html \
             test_bibedit_access_curator_none.html \
             test_bibedit_basic_record_locking.html
+            
+img_DATA = authorlist.colVis.css \
+           authorlist.dataTable.css \
+           authorlist.dataTable.jquery-ui.css \
+           authorlist.spreadSheet.css
 
-EXTRA_DIST = $(doc_DATA) $(test_DATA)
+EXTRA_DIST = $(doc_DATA) $(test_DATA) $(img_DATA)
 
 CLEANFILES = *~ *.tmp
