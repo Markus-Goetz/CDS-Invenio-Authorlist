@@ -1,6 +1,6 @@
 .SpreadSheet {
 	font-family : 'Trebuchet MS', Helvetica, sans-serif;
-	font-size : 0.9em;
+	font-size : 9pt;
 }
 
 table.SpreadSheet {
@@ -8,22 +8,21 @@ table.SpreadSheet {
 	border-collapse : collapse;
 }
 
-/* TODO: Revise this rule - maybe table.SpreadSheet...*/
-td {
+table.SpreadSheet td {
 	padding : 0px !important;
 }
 
 div.SpreadSheet.Edit {
 	margin-left : auto;
 	margin-right : auto;
-	width: 48px;
+	width: 50px;
 }
 
 input.SpreadSheet {
 	width : 100%;
 	text-align : right;
 	margin : 0px;
-	padding : 0px 8px;
+	padding : 0px;
 	
 }
 
@@ -51,6 +50,8 @@ div.ColVis {
 	width : 15px;
 }
 
-button.ColVis_Button {
-	font : 1em "Trebuchet MS", Helvetica, sans-serif;
+div.dataTables_wrapper {
+    min-height : 0px;
+    height : auto;
+    margin : 20px 0px;
 }

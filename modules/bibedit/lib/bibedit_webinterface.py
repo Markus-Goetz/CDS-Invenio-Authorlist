@@ -217,29 +217,33 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
     def authorlist(self, req, form):
         """Handles requests for the creation, cloning and editing of author 
         lists of collaborations."""
-        argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG), 'state': (str, 'new') })
+        argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG), 
+                                   'state': (str, 'new') })
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
-        metaheader = authorlist_templates.metaheader()
-        metaheader += """<script type="text/javascript">
-                          jQuery( document).ready( function() {
-                            var authorlist = new Authorlist( 'authorlist' );
-                          });
-                       </script>"""
-                       
-        body = '<div id="authorlist"></div>'
-    
-        return page(title         = _('Author list'),
-                    metaheaderadd = metaheader,
-                    body          = body,
-                    errors        = [],
-                    warnings      = [],
-                    uid           = getUid(req),
-                    language      = ln,
-                    navtrail      = navtrail,
-                    lastupdated   = __lastupdated__,
-                    req           = req)
+        if argd['state'] == 'new':
+            return page(title         = _('Author list'),
+                        metaheaderadd = authorlist_templates.metaheader(),
+                        body          = authorlist_templates.body(),
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+                        
+        else:
+            return page(title       = _('Author list'),
+                        body        = 'INVALID REQUEST',
+                        errors      = [],
+                        warnings    = [],
+                        uid         = getUid(req),
+                        language    = ln,
+                        navtrail    = navtrail,
+                        lastupdated = __lastupdated__,
+                        req         = req)
                     
 
     def __call__(self, req, form):

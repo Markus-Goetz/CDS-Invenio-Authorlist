@@ -1,7 +1,8 @@
 UNDEFINED = 'UNDEFINED'
 
 class Resources:
-    STYLESHEETS = ['authorlist.dataTable.css',
+    STYLESHEETS = ['authorlist.css', 
+                   'authorlist.dataTable.css',
                    'authorlist.dataTable.jquery-ui.css',
                    'jquery-ui/themes/smoothness/jquery-ui.css',
                    'authorlist.colVis.css',

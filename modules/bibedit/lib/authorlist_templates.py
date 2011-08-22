@@ -34,7 +34,15 @@ class Template:
         pass
         
     def metaheader(self):
-        return '%s\n%s' %  (self.style(), self.scripts())
+        return """
+               %s
+               %s
+               <script type="text/javascript">
+                   jQuery( document).ready( function() {
+                       var authorlist = new Authorlist( 'authorlist' );
+                   });
+               </script>
+               """ %  (self.style(), self.scripts())
         
     def style(self):
         return '<style type="text/css" title="CupertinoTheme">\n%s</style>' % \
@@ -49,5 +57,5 @@ class Template:
     def javascript(self, js):
         return '<script type="text/javascript" src="%s/js/%s"></script>' % (CFG_SITE_URL, js)
         
-    def container(self):
-        pass
+    def body(self):
+        return '<div id="authorlist"></div>'

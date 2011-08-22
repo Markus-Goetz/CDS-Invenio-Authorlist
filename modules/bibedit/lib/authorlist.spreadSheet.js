@@ -530,7 +530,7 @@ SpreadSheet.prototype._fnCreateDataTable = function( nTable, oInit ) {
             }
         ],
         
-        'aoColumns' : this._fnGetFixedWidthColumns( oInit ),
+        'aoColumns' : this._fnGetColumnDefinitions( oInit ),
         'aaSorting' : this._fnGetInitialSorting( oInit ),
         
         // ColVis plug-in initialization parameters
@@ -546,20 +546,26 @@ SpreadSheet.prototype._fnCreateDataTable = function( nTable, oInit ) {
 }
 
 /*
-* Function: _fnGetFixedWidthColumns
-* Purpose:  Sets Edit and Increment columns to the fixed size of 50px
+* Function: _fnGetColumnDefinitions
+* Purpose:  Sets special parameters for Edit and Increment columns such as fixed size of 50px
 * Input(s): object:oInit - the initializer object for the SpreadSheet; used to determine the widths
 * Returns:  object array:column width - array containing objects representing a DataTable width value
 *
 */
-SpreadSheet.prototype._fnGetFixedWidthColumns = function( oInit ) {
+SpreadSheet.prototype._fnGetColumnDefinitions = function( oInit ) {
     var columnWidths = [];
     
     for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++ ) {
         var column = oInit.Columns[i];
         
         if ( column.type === SpreadSheet._oTypes.edit || column.type === SpreadSheet._oTypes.increment ) {
-            columnWidths.push( { 'sWidth' : '50px' } );
+            var definition = { 'sWidth' : '50px' }
+            if ( column.type === SpreadSheet._oTypes.edit ) {
+                definition['bSearchable'] = false;
+                definition['bSortable'] = false;
+            }
+            
+            columnWidths.push( definition );
         } else {
             columnWidths.push( null );
         }
@@ -1311,7 +1317,8 @@ SpreadSheet.prototype._fnSave = function( nCell ) {
     var value = input.val();
     // Checkboxes are bit special... so we have to make some checks here
     if ( this._oInit.Columns[iHiddenX].type === SpreadSheet._oTypes.checkbox ) {
-        value = typeof input.attr( 'checked' ) === 'undefined' ? false : true;
+        var checked = input.attr( 'checked' );
+        value = typeof checked === 'undefined' || checked === false ? false : true;
     }
     
     this._oDataTable.fnUpdate( this._fnCreateCell( iHiddenX, iRow, value ), iRow, iHiddenX, false, true );
@@ -1425,7 +1432,7 @@ SpreadSheet.prototype._fnUnwrapCell = function( sCell ) {
     if ( nCell.is( 'input:text' ) ) {
         return nCell.val()
     } else if ( nCell.is( 'input:checkbox' ) ) {
-        return this.fnChecked( nCell );
+        return this._fnChecked( nCell );
     } else if ( nCell.is( 'select' ) ) {
         return nCell.children( 'option:selected' ).val();
     } else {
@@ -1442,5 +1449,6 @@ SpreadSheet.prototype._fnUnwrapCell = function( sCell ) {
 *
 */
 SpreadSheet.prototype._fnChecked = function( nCheckbox ) {
-    return typeof nCheckbox.attr( 'checked' ) !== 'undefined' ? 'true' : 'false';
+    var checked = nCheckbox.attr( 'checked' )
+    return typeof checked !== 'undefined' || checked === true ? 'true' : 'false';
 }
