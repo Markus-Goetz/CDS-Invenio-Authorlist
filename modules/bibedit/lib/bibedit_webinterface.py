@@ -46,8 +46,11 @@ from invenio.webinterface_handler import WebInterfaceDirectory, wash_urlargd
 from invenio.webpage import page
 from invenio.webuser import collect_user_info, getUid, page_not_authorized
 
+from invenio.webinterface_handler_config import HTTP_BAD_REQUEST
+
 import invenio.template
 authorlist_templates = invenio.template.load('authorlist')
+import invenio.authorlist_engine as authorlist_engine
 
 navtrail = (' <a class="navtrail" href=\"%s/help/admin\">Admin Area</a> '
             ) % CFG_SITE_URL
@@ -218,7 +221,7 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         """Handles requests for the creation, cloning and editing of author 
         lists of collaborations."""
         argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG), 
-                                   'state': (str, 'new') })
+                                   'state': (str, 'new')})
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
@@ -233,6 +236,32 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         navtrail      = navtrail,
                         lastupdated   = __lastupdated__,
                         req           = req)
+                        
+        elif argd['state'] == 'export':
+            form = wash_urlargd(form, {'mode' : (str, 'json'),
+                                       'data' : (str, '{}')})
+                                       
+            converter = authorlist_engine.Converters.get(form['mode'])
+            
+            if converter is None:
+                return page(title       = _('Author list'),
+                            body        = 'INVALID REQUEST',
+                            errors      = [],
+                            warnings    = [],
+                            uid         = getUid(req),
+                            language    = ln,
+                            navtrail    = navtrail,
+                            lastupdated = __lastupdated__,
+                            req         = req)
+                            
+            else:
+                data = json.loads(form['data'])
+                file_name = 'attachement; filename="%s"' % converter.FILE_NAME
+                
+                req.content_type = converter.CONTENT_TYPE
+                req.headers_out['Content-disposition'] = file_name
+                
+                return authorlist_engine.dumps(data, converter)
                         
         else:
             return page(title       = _('Author list'),

@@ -1449,6 +1449,6 @@ SpreadSheet.prototype._fnUnwrapCell = function( sCell ) {
 *
 */
 SpreadSheet.prototype._fnChecked = function( nCheckbox ) {
-    var checked = nCheckbox.attr( 'checked' )
-    return typeof checked !== 'undefined' || checked === true ? 'true' : 'false';
+    var checked = nCheckbox.attr( 'checked' );
+    return typeof checked === 'undefined' || checked === false ? 'false' : 'true';
 }

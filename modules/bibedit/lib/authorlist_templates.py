@@ -45,7 +45,7 @@ class Template:
                """ %  (self.style(), self.scripts())
         
     def style(self):
-        return '<style type="text/css" title="CupertinoTheme">\n%s</style>' % \
+        return '<style type="text/css" title="SmoothnessTheme">\n%s</style>' % \
                '\n'.join([self.css(sheet) for sheet in cfg.Resources.STYLESHEETS])
         
     def css(self, css):

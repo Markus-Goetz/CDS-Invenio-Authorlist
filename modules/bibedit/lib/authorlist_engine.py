@@ -24,20 +24,42 @@ import time
 import invenio.authorlist_config as cfg
 
 class Converter(object):
+    CONTENT_TYPE = 'text/plain'
+    FILE_NAME = 'converted.txt'
+
     def __init__(self):
         raise NotImplementedError
         
-    def load(self, data):
+    def dump(self, data):
         raise NotImplementedError
+        
+    def dumps(self, data):
+        raise NotImplementedError
+        
+class JSONConverter(Converter):
+    CONTENT_TYPE = 'application/json'
+    FILE_NAME = 'authors.json'
 
-class AuthorsXML(Converter):
+    def __init__(self):
+        self.data = None
+        
+    def dump(self, data):
+        return data
+        
+    def dumps(self, data):
+        return json.dumps(data, indent=4)
+
+class AuthorsXMLConverter(Converter):
+    CONTENT_TYPE = 'application/xml'
+    FILE_NAME = 'authors.xml'
+
     def __init__(self):
         self.document = None
         self.root = None
         self.organizations = None
         
-    def load(self, data, complete=False):
-        self.organiazations = {}
+    def dump(self, data, complete=False):
+        self.organizations = {}
     
         self.__create_document(data, complete)
         self.__create_header(data, complete)
@@ -47,9 +69,8 @@ class AuthorsXML(Converter):
         
         return self.document
         
-    def loads(self, data, complete):
-        self.load(data, complete)
-        return self.document.toprettyxml(indent = '    ', encoding='utf-8')
+    def dumps(self, data, complete=False):
+        return self.dump(data, complete).toprettyxml(indent = '    ', encoding='utf-8')
         
     def __create_document(self, data, complete):
         self.document = xml.getDOMImplementation()\
@@ -60,18 +81,18 @@ class AuthorsXML(Converter):
         self.root.setAttribute('xmlns:cal', 'http://www.slac.stanford.edu/\
                                              spires/hepnames/authors_xml/')
         
-    def __create_header(self, date, complete):
+    def __create_header(self, data, complete):
         creation_date = self.document.createElement('cal:creationDate')
         creation_date_value = time.strftime(cfg.AuthorsXML.DATE_TIME_FORMAT)
         creation_date_text = self.document.createTextNode(creation_date_value)
         creation_date.appendChild(creation_date_text)
         self.root.appendChild(creation_date)
         
-        for reference_value in data.get(cfg.JSON.REFERENCES, []):
-            reference = self.document.createElement('cal:publicationReference')
-            reference_text = self.document.createTextNode(reference_value)
-            reference.appendChild(refrence_text)
-            self.root.appendChild(refrence)
+        reference_value = data.get(cfg.JSON.REFERENCE, '')
+        reference = self.document.createElement('cal:publicationReference')
+        reference_text = self.document.createTextNode(reference_value)
+        reference.appendChild(reference_text)
+        self.root.appendChild(reference)
         
     def __create_collaborations(self, data, complete):
         collaborations = self.document.createElement('cal:collaborations')
@@ -82,7 +103,7 @@ class AuthorsXML(Converter):
         collaborations.appendChild(collaboration)
         
         name = self.document.createElement('foaf:name')
-        name_value = data.get(cfg.JSON.COLLABORATION_NAME, cfg.UNDEFINED)
+        name_value = data.get(cfg.JSON.COLLABORATION, cfg.UNDEFINED)
         name_text = self.document.createTextNode(name_value)
         name.appendChild(name_text)       
         collaboration.appendChild(name)        
@@ -94,7 +115,7 @@ class AuthorsXML(Converter):
     def __create_organizations(self, data, complete):
         organizations = self.document.createElement('cal:organizations')
         
-        for index, organization in enumerate(data.get(cfg.JSON.ORGANIZATIONS, [])):
+        for index, organization in enumerate(data.get(cfg.JSON.AFFILIATIONS, [])):
             organizations.appendChild(self.__create_organization(organization, \
                                                                  index, \
                                                                  complete))
@@ -106,30 +127,33 @@ class AuthorsXML(Converter):
         organization_id = 'a' + str(index + 1)
         organization.setAttribute('id', organization_id)
         
-        self.organizations[organization_id] = data.get(cfg.JSON.SHORT_NAME)
+        self.organizations[data.get(cfg.JSON.SHORT_NAME)] = organization_id
         
         domain = self.document.createElement('cal:orgDomain')
-        domain_value = data.get(cfg,JSON.DOMAIN, cfg.AuthorsXML.DOMAIN)
+        domain_value = data.get(cfg.JSON.DOMAIN, cfg.AuthorsXML.DOMAIN)
         domain_text = self.document.createTextNode(domain_value)
         domain.appendChild(domain_text)
         organization.appendChild(domain)
         
         name = self.document.createElement('foaf:name')
-        name_value = data.get(cfg.JSON.ORGANIZATION_NAME, cfg.UNDEFINED)
+        name_value = data.get(cfg.JSON.NAME_AND_ADDRESS, cfg.UNDEFINED)
         name_text = self.document.createTextNode(name_value)
         name.appendChild(name_text)
         organization.appendChild(name)
         
         org_name = self.document.createElement('cal:orgName')
         org_name.setAttribute('source', cfg.AuthorsXML.ORGANIZATION_SOURCE)
-        org_name_value = data.get(cfg.JSON.INSPIRE_ID, cfg.UNDEFINED)
+        org_name_value = data.get(cfg.JSON.SPIRES_ID, cfg.UNDEFINED)
         org_name_text = self.document.createTextNode(org_name_value)
         org_name.appendChild(org_name_text)
         organization.appendChild(org_name)
         
         status = self.document.createElement('cal:orgStatus')
         status.setAttribute('collaborationid', cfg.AuthorsXML.COLLABORATION_ID)
-        status_value = data.get(cfg.JSON.MEMBER)
+        if data.get(cfg.JSON.MEMBER) == cfg.JSON.FALSE:
+            status_value = cfg.AuthorsXML.NONMEMBER
+        else:
+            status_value = cfg.AuthorsXML.MEMBER
         status_text = self.document.createTextNode(status_value)
         status.appendChild(status_text)
         organization.appendChild(status)
@@ -157,7 +181,7 @@ class AuthorsXML(Converter):
     def __create_author(self, data, index, complete):
         author = self.document.createElement('foaf:Person')
         
-        given_name = self.document.createElement('foaf:giveName')
+        given_name = self.document.createElement('foaf:givenName')
         given_name_value = data.get(cfg.JSON.GIVEN_NAME, \
                                     cfg.AuthorsXML.GIVEN_NAME)
         given_name_text = self.document.createTextNode(given_name_value)
@@ -167,25 +191,28 @@ class AuthorsXML(Converter):
         family_name = self.document.createElement('foaf:familyName')
         family_name_value = data.get(cfg.JSON.FAMILY_NAME, cfg.UNDEFINED)
         family_name_text = self.document.createTextNode(family_name_value)
-        family_name.appendChild(family_name)
+        family_name.appendChild(family_name_text)
         author.appendChild(family_name)
         
         suffix = self.document.createElement('cal:authorSuffix')
         suffix_value = data.get(cfg.JSON.SUFFIX, cfg.AuthorsXML.SUFFIX)
         suffix_text = self.document.createTextNode(suffix_value)
         suffix.appendChild(suffix_text)
-        author.appendChild(suffix)   
+        author.appendChild(suffix)
         
         status = self.document.createElement('cal:authorStatus')
-        status_value = data.get(cfg.JSON.STATUS, cfg.AuthorsXML.STATUS)
+        if data.get(cfg.JSON.ALIVE) == cfg.JSON.FALSE:
+            status_value = cfg.AuthorsXML.DECEASED
+        else:
+            status_value = cfg.AuthorsXML.ALIVE
         status_text = self.document.createTextNode(status_value)
-        status.appendChild(status_value)
+        status.appendChild(status_text)
         author.appendChild(status)
         
         name_on_paper = self.document.createElement('cal:authorNamePaper')
         name_on_paper_value = data.get(cfg.JSON.NAME_ON_PAPER, cfg.UNDEFINED)
         name_on_paper_text = self.document.createTextNode(name_on_paper_value)
-        name_on_paper.appendChild(name_on_paper)
+        name_on_paper.appendChild(name_on_paper_text)
         author.appendChild(name_on_paper)
         
         collaboration = self.document.createElement('cal:authorCollaboration')
@@ -200,9 +227,9 @@ class AuthorsXML(Converter):
             affiliation = self.__create_affiliation(affiliated, cfg.AuthorsXML.AFFILIATED_WITH)
             affiliations.appendChild(affiliation)
             
-        currently = self.organizations.get(data.get(cfg.JSON.CURRENTLY_AT))
-        if currently is not None:
-            affiliation = self.__create_affiliation(affiliated, cfg.AuthorsXML.ALSO_AT)
+        also_at = self.organizations.get(data.get(cfg.JSON.ALSO_AT))
+        if also_at is not None:
+            affiliation = self.__create_affiliation(also_at, cfg.AuthorsXML.ALSO_AT)
             affiliations.appendChild(affiliation)
         
         author.appendChild(affiliations)
@@ -225,6 +252,8 @@ class AuthorsXML(Converter):
             funding = self.document.createElement('cal:authorFunding')
             author.appendChild(funding)
             
+        return author
+            
     def __create_affiliation(self, organization, connection):
         affiliation = self.document.createElement('cal:authorAffiliation')
         affiliation.setAttribute('organizationid', organization)
@@ -232,26 +261,30 @@ class AuthorsXML(Converter):
         
         return affiliation 
         
-class AtlasTex(Converter):
+class AtlasTexConverter(Converter):
     def __init__(self):
         pass
         
-class CMSTex(Converter):
+class CMSTexConverter(Converter):
     def __init__(self):
         pass
         
-class MARCXML(Converter):
-    def __init__(self);
+class MARCXMLConverter(Converter):
+    def __init__(self):
         pass
+        
+class Converters:
+    __converters__ = {
+        'JSON' : JSONConverter,
+        'AUTHORSXML' : AuthorsXMLConverter
+    }
+    
+    @staticmethod
+    def get(mode):
+        return Converters.__converters__.get(mode.upper(), None)
       
-def load(data, converter):
-    pass
-    
-def loads(data, converter):
-    pass
-    
 def dump(data, converter):
-    pass
+    return converter().dump(data)
     
 def dumps(data, converter):
-    pass
+    return converter().dumps(data)
