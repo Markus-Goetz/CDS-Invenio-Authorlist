@@ -26,6 +26,7 @@ __revision__ = "$Id$"
 import sys
 import re
 import textwrap
+import itertools
 import invenio.template
 from invenio.config import CFG_ETCDIR
 try:
@@ -35,6 +36,7 @@ except ImportError:
     CHARDET_AVAILABLE = False
 
 CFG_LATEX_UNICODE_TRANSLATION_CONST = {}
+CFG_UNICODE_LATEX_TRANSLATION_CONST = {}
 
 CFG_WRAP_TEXT_IN_A_BOX_STYLES = {
     '__DEFAULT' : {
@@ -469,6 +471,49 @@ def translate_latex2unicode(text, kb_file="%s/bibconvert/KB/latex-to-unicode.kb"
                       text)
     # Return Unicode representation of translated text
     return text
+    
+def translate_unicode2latex(text, kb_file="%s/bibconvert/KB/latex-to-unicode.kb" % CFG_ETCDIR):
+    """
+    This function will take a given text, that presumably containing Unicode 
+    characters and attempts to translate it to LaTeX signs using the given or 
+    default KB translation table located under CFG_ETCDIR/bibconvert/KB/
+    latex-to-unicode.kb. The translated string will be returned.
+    
+    The function loads the required symbol table and reqular expression if it 
+    was not previously generated.
+
+    @param text: a text presumably containing Unicode symbols.
+    @type text: string
+
+    @param kb_file: full path to file containing latex2unicode translations.
+                    Defaults to CFG_ETCDIR/bibconvert/KB/latex-to-unicode.kb
+    @type kb_file: string
+
+    @return: LaTeX representation of translated text
+    @rtype: unicode
+    """
+    text = unicode(wash_for_utf8(text))
+
+    # Load translation table, if required
+    if not CFG_UNICODE_LATEX_TRANSLATION_CONST:
+        _load_unicode2latex_constants(kb_file)
+        
+    # WARNING - big hack here! For some reason python will not match regular
+    # expressions on the first character of a unicode string. Means we have to
+    # fix the first character temporarily...
+    text = " " + text
+    
+    # Replace all Unicode characters by their respective LaTeX representation
+    for match in CFG_UNICODE_LATEX_TRANSLATION_CONST['regexp_obj'].finditer(text):
+        character = match.group()
+        # skip empty matches
+        if character == u'':
+            continue
+        text = re.sub(character, CFG_UNICODE_LATEX_TRANSLATION_CONST['table'][character], text)
+    
+    # remove the inserted temporal character in the front and return translation    
+    return text[1:]
+    
 
 def _load_latex2unicode_constants(kb_file="%s/bibconvert/KB/latex-to-unicode.kb" % \
                             (CFG_ETCDIR,)):
@@ -501,3 +546,33 @@ def _load_latex2unicode_constants(kb_file="%s/bibconvert/KB/latex-to-unicode.kb"
     data.close()
     CFG_LATEX_UNICODE_TRANSLATION_CONST['regexp_obj'] = re.compile("|".join(latex_symbols))
     CFG_LATEX_UNICODE_TRANSLATION_CONST['table'] = translation_table
+
+def _load_unicode2latex_constants(kb_file="%s/bibconvert/KB/latex-to-unicode.kb" % CFG_ETCDIR):
+    """
+    Load Unicode2LaTeX translation table dictionary and regular expression 
+    object from KB to a global dictionary. To do so, the function loads the 
+    LaTeX2Unicode translation  table first if required and just inverts its 
+    mapping.
+
+    @param kb_file: full path to file containing latex2unicode translations.
+                    Defaults to CFG_ETCDIR/bibconvert/KB/latex-to-unicode.kb
+    @type kb_file: string
+
+    @return: dict of type: {'regexp_obj': regexp match object,
+                            'table': dict of Unicode -> LaTeX mappings}
+    @rtype: dict
+    """
+    if not 'table' in CFG_LATEX_UNICODE_TRANSLATION_CONST:
+        _load_latex2unicode_constants(kb_file)
+        
+    if not CFG_LATEX_UNICODE_TRANSLATION_CONST:
+        return
+        
+    table = CFG_LATEX_UNICODE_TRANSLATION_CONST['table']
+    table_keys = table.keys()
+    table_values = table.values()
+    
+    inverse = dict(itertools.izip(table_values, table_keys))
+    
+    CFG_UNICODE_LATEX_TRANSLATION_CONST['regexp_obj'] = u'|'.join(table_values)
+    CFG_UNICODE_LATEX_TRANSLATION_CONST['table'] = inverse

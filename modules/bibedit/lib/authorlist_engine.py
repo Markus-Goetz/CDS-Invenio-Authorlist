@@ -20,8 +20,36 @@
 import simplejson as json
 import xml.dom.minidom as xml
 import time
+import cStringIO
 
 import invenio.authorlist_config as cfg
+
+class ValueIndexedDict(object):
+    def __init__(self, raw_data):
+        self.__raw_data = raw_data
+        
+        self.__indices = {}
+        
+    def index(self, key):
+        if key in self.__indices:
+            return
+            
+        else:
+            index = {}
+            for element in self.__raw_data:
+                index.setdefault(element[key], []).append(element)
+                
+            self.__indices[key] = index
+                
+    def select(self, key, where, equals_to):
+        if not where in self.__indices:
+            self.index(where)
+            
+        entries = self.__indices.get(where, {}).get(equals_to, [])
+        if key == '*':
+            return entries
+        else:
+            return [entry[key] for entry in entries if key in entry]
 
 class Converter(object):
     CONTENT_TYPE = 'text/plain'
@@ -61,18 +89,18 @@ class AuthorsXMLConverter(Converter):
     def dump(self, data, complete=False):
         self.organizations = {}
     
-        self.__create_document(data, complete)
-        self.__create_header(data, complete)
-        self.__create_collaborations(data, complete)
-        self.__create_organizations(data, complete)
-        self.__create_authors(data, complete)
+        self.__create_document__(data, complete)
+        self.__create_header__(data, complete)
+        self.__create_collaborations__(data, complete)
+        self.__create_organizations__(data, complete)
+        self.__create_authors__(data, complete)
         
         return self.document
         
     def dumps(self, data, complete=False):
         return self.dump(data, complete).toprettyxml(indent = '    ', encoding='utf-8')
         
-    def __create_document(self, data, complete):
+    def __create_document__(self, data, complete):
         self.document = xml.getDOMImplementation()\
                            .createDocument(None, 'collaborationauthorlist', None)
                            
@@ -81,7 +109,7 @@ class AuthorsXMLConverter(Converter):
         self.root.setAttribute('xmlns:cal', 'http://www.slac.stanford.edu/\
                                              spires/hepnames/authors_xml/')
         
-    def __create_header(self, data, complete):
+    def __create_header__(self, data, complete):
         creation_date = self.document.createElement('cal:creationDate')
         creation_date_value = time.strftime(cfg.AuthorsXML.DATE_TIME_FORMAT)
         creation_date_text = self.document.createTextNode(creation_date_value)
@@ -94,7 +122,7 @@ class AuthorsXMLConverter(Converter):
         reference.appendChild(reference_text)
         self.root.appendChild(reference)
         
-    def __create_collaborations(self, data, complete):
+    def __create_collaborations__(self, data, complete):
         collaborations = self.document.createElement('cal:collaborations')
         self.root.appendChild(collaborations)
         
@@ -112,17 +140,17 @@ class AuthorsXMLConverter(Converter):
             experiment = self.document.createElement('cal:experimentNumber')
             collaboration.appendChild(experiment)
             
-    def __create_organizations(self, data, complete):
+    def __create_organizations__(self, data, complete):
         organizations = self.document.createElement('cal:organizations')
         
         for index, organization in enumerate(data.get(cfg.JSON.AFFILIATIONS, [])):
-            organizations.appendChild(self.__create_organization(organization, \
+            organizations.appendChild(self.__create_organization__(organization, \
                                                                  index, \
                                                                  complete))
         
         self.root.appendChild(organizations) 
         
-    def __create_organization(self, data, index, complete):
+    def __create_organization__(self, data, index, complete):
         organization = self.document.createElement('foaf:Organization')
         organization_id = 'a' + str(index + 1)
         organization.setAttribute('id', organization_id)
@@ -170,15 +198,15 @@ class AuthorsXMLConverter(Converter):
             
         return organization
             
-    def __create_authors(self, data, complete):
+    def __create_authors__(self, data, complete):
         authors = self.document.createElement('cal:authors')
         
         for index, author in enumerate(data.get(cfg.JSON.AUTHORS, [])):
-            authors.appendChild(self.__create_author(author, index, complete))
+            authors.appendChild(self.__create_author__(author, index, complete))
         
         self.root.appendChild(authors)
         
-    def __create_author(self, data, index, complete):
+    def __create_author__(self, data, index, complete):
         author = self.document.createElement('foaf:Person')
         
         given_name = self.document.createElement('foaf:givenName')
@@ -224,12 +252,12 @@ class AuthorsXMLConverter(Converter):
         
         affiliated = self.organizations.get(data.get(cfg.JSON.AFFILIATED_WITH))
         if affiliated is not None:
-            affiliation = self.__create_affiliation(affiliated, cfg.AuthorsXML.AFFILIATED_WITH)
+            affiliation = self.__create_affiliation__(affiliated, cfg.AuthorsXML.AFFILIATED_WITH)
             affiliations.appendChild(affiliation)
             
         also_at = self.organizations.get(data.get(cfg.JSON.ALSO_AT))
         if also_at is not None:
-            affiliation = self.__create_affiliation(also_at, cfg.AuthorsXML.ALSO_AT)
+            affiliation = self.__create_affiliation__(also_at, cfg.AuthorsXML.ALSO_AT)
             affiliations.appendChild(affiliation)
         
         author.appendChild(affiliations)
@@ -254,7 +282,7 @@ class AuthorsXMLConverter(Converter):
             
         return author
             
-    def __create_affiliation(self, organization, connection):
+    def __create_affiliation__(self, organization, connection):
         affiliation = self.document.createElement('cal:authorAffiliation')
         affiliation.setAttribute('organizationid', organization)
         affiliation.setAttribute('connection', connection)
@@ -266,8 +294,60 @@ class AtlasTexConverter(Converter):
         pass
         
 class CMSTexConverter(Converter):
+    CONTENT_TYPE = 'text/plain'
+    FILE_NAME = 'authors.tex'
+    
+    __ORG_TEMPLATE__ = '\\textbf{%s}\\\\*[0pt]\n%s\n\\vskip\\cmsintskip\n'
+    __ALSO_AT_TEMPLATE__ = '%s:~~Also at %s\\\\'
+
     def __init__(self):
-        pass
+        self.authors = None
+        self.affiliations = None
+        
+    def dump(self, data):
+        self.__index_data__(data)
+        result = cStringIO.StringIO()
+        deceased = False
+        
+        for affiliation in data.get(cfg.JSON.AFFILIATIONS, []):
+            entries = self.authors.select('*', where=cfg.JSON.AFFILIATED_WITH, 
+                                          equals_to=affiliation.get(cfg.JSON.SHORT_NAME))
+                                  
+            if entries:
+                affiliation_name = affiliation.get(cfg.JSON.NAME_AND_ADDRESS)
+                authors = [entry.replace(' ', '~', 1) for entry in entries]
+                out = self.__class__.__ORG_TEMPLATE__ % (affiliation_name, ', '.join(entries))
+                result.write(out)
+        
+        if deceased:        
+            result.write('\\dag:~Deceased\\\\\n')
+                
+        return result
+        
+    def dumps(self, data):
+        return self.dump(data).getvalue()
+        
+    def __index_data__(self, data):
+        self.authors = ValueIndexedDict(data.get(cfg.JSON.AUTHORS, []))
+        self.authors.index(cfg.JSON.AFFILIATED_WITH)
+        self.authors.index(cfg.JSON.ALSO_AT)
+        
+        self.affiliations = ValueIndexedDict(data.get(cfg.JSON.AFFILIATIONS, []))
+        self.affiliations.index(cfg.JSON.SHORT_NAME)
+        
+    def __create_author__(self, author_data):
+        author_name = author_data.get(cfg.JSON.NAME_ON_PAPER)
+        deceased = False
+        
+        if author_data.get(cfg.JSON.ALIVE) == cfg.JSON.FALSE:
+            dead = '$^{\\textrm{\\dag}}$'
+            deceased = True
+        else:
+            dead = ''
+            
+        
+        
+        return '%s%s%s' % (author_name, dead, also_at), deceased
         
 class MARCXMLConverter(Converter):
     def __init__(self):
@@ -276,12 +356,13 @@ class MARCXMLConverter(Converter):
 class Converters:
     __converters__ = {
         'JSON' : JSONConverter,
-        'AUTHORSXML' : AuthorsXMLConverter
+        'AUTHORSXML' : AuthorsXMLConverter,
+        'CMS TEX' : CMSTexConverter
     }
     
-    @staticmethod
-    def get(mode):
-        return Converters.__converters__.get(mode.upper(), None)
+    @classmethod
+    def get(cls, mode):
+        return cls.__converters__.get(mode.upper(), None)
       
 def dump(data, converter):
     return converter().dump(data)

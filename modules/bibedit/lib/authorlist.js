@@ -21,6 +21,10 @@ Authorlist._oForm = {
 }
 
 function Authorlist( sDiv ) {
+    /*jQuery( window ).blur( function() {
+        console.log('looool');
+    });*/
+
     this._nDiv = this._fnSanitizeDiv( sDiv );
     this._nDiv.addClass( Authorlist._oCss.Authorlist );
       
@@ -45,6 +49,7 @@ function Authorlist( sDiv ) {
     this._nControls = this._fnCreateFieldset( 'Edit' );
     this._fnCreateFormatButton( 'JSON', this._nControls );
     this._fnCreateFormatButton( 'AuthorsXML', this._nControls );
+    this._fnCreateFormatButton( 'CMS Tex', this._nControls );
 
     this._nForm.append( this._nMode, this._nData, this._nPaper, 
                         this._nAuthors, this._nAffiliations, this._nControls );
@@ -221,5 +226,6 @@ Authorlist.prototype._fnMakeFormatButtonCallback = function() {
         self._nData.val( JSON.stringify( self.fnGetData() ) );
         console.log(JSON.stringify( self.fnGetData() ));
         self._nForm.submit();
+        console.log("foo");
     }
 }
