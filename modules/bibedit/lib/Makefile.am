@@ -54,7 +54,8 @@ js_DATA = bibedit_display.js \
           bibedit_template_interface.js \
           authorlist.js \
           authorlist.keyTable.js \
-          authorlist.spreadSheet.js
+          authorlist.spreadSheet.js \
+          authorlist.spreadSheet.new.js
 
 EXTRA_DIST = $(pylib_DATA) \
              $(js_DATA)

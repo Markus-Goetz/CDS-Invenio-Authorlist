@@ -225,7 +225,48 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
-        if argd['state'] == 'new':
+        if argd['state'] == 'foo':
+            return page(title        = 'Foo Test',
+                        metaheaderadd = """<style type="text/css" title="SmoothnessTheme"> 
+@import "http://pcgs2x2400h03.cern.ch/img/authorlist.dataTable.css";
+@import "http://pcgs2x2400h03.cern.ch/img/authorlist.dataTable.jquery-ui.css";
+@import "http://pcgs2x2400h03.cern.ch/img/jquery-ui/themes/smoothness/jquery-ui.css";
+@import "http://pcgs2x2400h03.cern.ch/img/authorlist.colVis.css";
+@import "http://pcgs2x2400h03.cern.ch/img/authorlist.spreadSheet.new.css";</style> 
+
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.min.js"></script> 
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery-ui-1.7.3.custom.min.js"></script> 
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.js"></script> 
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.ColVis.min.js"></script>
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/authorlist.spreadSheet.new.js"></script>
+<script type="text/javascript"> 
+   jQuery( document).ready( function() {
+       jQuery( '.moo' ).live( 'click', function( event ) {
+            console.log( event );
+       } );
+   
+       var spreadSheet = new SpreadSheet( 'authorlist', {
+            columns : [ {
+                'title' : 'Simple',
+                'value' : 'simple foo',
+            },  {
+                'title' : 'Extendable',
+                'value' : 'extendable foo',
+                'width' : '50%',
+                'extendable' : true
+            }, ]
+       } );
+   });
+</script>""",           body          = authorlist_templates.body(),
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+        
+        elif argd['state'] == 'new':
             return page(title         = _('Author list'),
                         metaheaderadd = authorlist_templates.metaheader(),
                         body          = authorlist_templates.body(),

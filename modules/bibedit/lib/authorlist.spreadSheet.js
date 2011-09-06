@@ -217,7 +217,7 @@ SpreadSheet.prototype._fnSanitizeColumns = function( aoColumns ) {
                 
             case SpreadSheet._oTypes.checkbox:
                 if ( typeof column.value !== 'boolean' ) {
-                    console.log( 'WARNING: Column value has to be of type boolean for checkbox type, skipping ' + column.name );
+                    console.log( 'WARNING: Column value has to be of type boolean for checkbox type, skipping ' +cookie column.name );
                     continue;
                 }
                 break;

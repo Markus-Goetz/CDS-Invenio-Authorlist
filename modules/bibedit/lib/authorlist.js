@@ -21,10 +21,6 @@ Authorlist._oForm = {
 }
 
 function Authorlist( sDiv ) {
-    /*jQuery( window ).blur( function() {
-        console.log('looool');
-    });*/
-
     this._nDiv = this._fnSanitizeDiv( sDiv );
     this._nDiv.addClass( Authorlist._oCss.Authorlist );
       

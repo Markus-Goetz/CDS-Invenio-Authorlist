@@ -28,7 +28,8 @@ img_DATA = authorlist.css \
            authorlist.colVis.css \
            authorlist.dataTable.css \
            authorlist.dataTable.jquery-ui.css \
-           authorlist.spreadSheet.css
+           authorlist.spreadSheet.css \
+           authorlist.spreadSheet.new.css
 
 EXTRA_DIST = $(doc_DATA) $(test_DATA) $(img_DATA)
 
