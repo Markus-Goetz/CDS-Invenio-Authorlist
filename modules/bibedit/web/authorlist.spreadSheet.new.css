@@ -40,6 +40,14 @@ table.SpreadSheet td {
     padding : 0px !important;
 }
 
+table.SpreadSheet td.Clickable {
+    vertical-align : top;
+}
+
+div.Wrapper {
+    position : relative;
+}
+
 table.Content {
     width : 100%;
     padding : 0px;
@@ -53,10 +61,6 @@ td.Extendable {
 
 span.Extendable.ui-icon-plus {
     margin-left : 3px;
-}
-
-div.Content {
-
 }
 
 input.Text {

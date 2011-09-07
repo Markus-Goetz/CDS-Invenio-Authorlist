@@ -245,14 +245,24 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
             console.log( event );
        } );
    
-       var spreadSheet = new SpreadSheet( 'authorlist', {
+       spreadSheet = new SpreadSheet( 'authorlist', {
             columns : [ {
                 'title' : 'Simple',
                 'value' : 'simple foo',
-            },  {
+                'readonly' : true
+            }, {
+                'title' : 'Readonly',
+                'value' : 'extendable foo',
+                'width' : '15%',
+                'readonly' : true
+            },{
+                'title' : 'Readonly',
+                'value' : 'extendable foo',
+                'width' : '15%',
+            }, {
                 'title' : 'Extendable',
                 'value' : 'extendable foo',
-                'width' : '50%',
+                'width' : '40%',
                 'extendable' : true
             }, ]
        } );

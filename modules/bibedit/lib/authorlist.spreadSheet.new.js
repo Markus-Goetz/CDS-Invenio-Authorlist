@@ -10,6 +10,7 @@ SpreadSheet.CSS = {
     'DataTable'             : 'DataTable',
     
     // Cell classes
+    'Wrapper'               : 'Wrapper',
     'Content'               : 'Content',
     'Clickable'             : 'Clickable',
     'Focus'                 : 'Focus',
@@ -69,10 +70,11 @@ SpreadSheet.Column = function( oInit ) {
     this.bVisible = typeof oInit.visible !== 'undefined' ? oInit.visible : true;
     
     // callbacks
-    jQuery.fn.dataTableExt.oSort[ this.sType + '-asc' ] = this._fnMakeAscendingSorting();
-    jQuery.fn.dataTableExt.oSort[ this.sType + '-desc' ] = this._fnMakeDescendingSorting();
+    var oSort = jQuery.fn.dataTableExt.oSort;    
+    oSort[ this.sType + '-asc' ] = this._fnMakeAscendingSorting();
+    oSort[ this.sType + '-desc' ] = this._fnMakeDescendingSorting();
     jQuery.fn.dataTableExt.ofnSearch[ this.sType ] = this._fnMakeFilter();
-    this._fnRegisterClickCallback();
+    this._fnRegisterClicks();
 }
 
 /*
@@ -163,6 +165,9 @@ SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
     // Extendable cells expect arrays as value
     if ( this.bExtendable && !jQuery.isArray( oValue ) ) oValue = [ oValue ];
 
+    var nWrapper = jQuery( '<div>' );
+    nWrapper.addClass( SpreadSheet.CSS.Wrapper );
+
     // Not extendable? then return one cell only
     if ( !this.bExtendable ) {
         var nContent = jQuery( '<div>' );
@@ -170,8 +175,9 @@ SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
         
         var nCell = this._fnCreateCell( oValue );
         nContent.append( nCell );
+        nWrapper.append( nContent );
         
-        return this._fnOuterHtml( nContent );
+        return this._fnOuterHtml( nWrapper );
     }
 
     // Is extendable? Some layouting required
@@ -206,7 +212,8 @@ SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
         }
     }
     
-    return this._fnOuterHtml( nTable );
+    nWrapper.append( nTable );
+    return this._fnOuterHtml( nWrapper );
 }
 
 /*
@@ -310,63 +317,190 @@ SpreadSheet.Column.prototype.fnValue = function( oData ) {
     return aoResults;
 }
 
-SpreadSheet.Column.prototype._fnRegisterClickCallback = function() {
+/*
+* Function: _fnRegisterClicks
+* Purpose:  Register the click event handlers for a cell. The individual calls 
+*           for clicking on a the cell itself should be overwritten in other 
+*           column types, the plus and minus button interaction however should 
+*           be reusable in most of the cases.
+* Input(s): void
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterClicks = function() {
     var self = this;
     var sTable = '#' + this.oSpreadSheet.fnGetId();
     var sTd = [ 'td', this.sType, SpreadSheet.CSS.Clickable ].join( '.' );
-    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
     
+    // Click on a cell
+    this._fnRegisterClick( sTable, sTd );    
+    // Blurring a cell
+    this._fnRegisterBlur( sTable, sTd );
+    // Click on plus
+    this._fnRegisterAdd( sTable, sTd );
+    // Click on minus
+    this._fnRegisterMinus( sTable, sTd );
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will make the clicked input field writeable and select the 
+*           content.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+
     jQuery( sTable ).delegate( sInput, 'click', function( event ) {
+        if ( self.bProtected ) return;
+    
         var nInput = jQuery( this );
         var nCell = nInput.parents( sTd );
         
-        nInput.attr( 'readonly', false );
+        nInput.removeAttr( 'readonly' );
         nInput.removeClass( SpreadSheet.CSS.Readonly );
         nInput.select();
     } );
+}
+
+/*
+* Function: _fnRegisterBlur
+* Purpose:  Registers a cell blur callback. In this case, make all blurred input
+*           field readonly again and save the content in the DataTables instance
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterBlur = function( sTable, sTd ) {
+    var self = this;
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
     
     jQuery( sTable ).delegate( sInput, 'blur', function( event ) {
         var nInput = jQuery( this );
         var nCell = nInput.parents( sTd );
+        var aoValues = self.fnValue( nCell );
         
         nInput.attr( 'readonly', 'readonly' );
         nInput.addClass( SpreadSheet.CSS.Readonly );
-        // TODO: SpreadSheet update
+        self.oSpreadSheet.fnUpdate( nCell, self.fnCreate( aoValues ) );
     } );
-    
+}
+
+/*
+* Function: _fnRegisterAdd
+* Purpose:  Register the callback what will happen if one clicks on the neat add
+*           button in a cell. Usually a new default line should appear and the 
+*           whole thing shall be saved in the DataTables instance. In almost all 
+*           cases this callback is nothing that you would like to overwrite in 
+*           your column prototype.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterAdd = function( sTable, sTd ) {
+    var self = this;
     var sAdd = [ 'span', this.sType, SpreadSheet.CSS.Plus ].join( '.' );
-    var sMinus = [ 'span', this.sType, SpreadSheet.CSS.Minus ].join( '.' );
-    
     
     jQuery( sTable ).delegate( sAdd, 'click', function( event ) {
         var nCell = jQuery( this ).parents( sTd );
-        
         self._fnInsertNewLine( nCell );
     } );
+}
+
+/*
+* Function: _fnRegisterMinus
+* Purpose:  Register the callback what will happen if one clicks on the neat 
+*           minus button in a cell. In this case the last line will be removed 
+*           and the new cell shall be saved in the DataTables instance. In 
+*           almost all cases this event handler is nothing that you would like 
+*           to overwrite in your column prototype.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterMinus = function( sTable, sTd ) {
+    var self = this;
+    var sMinus = [ 'span', this.sType, SpreadSheet.CSS.Minus ].join( '.' );
     
     jQuery( sTable ).delegate( sMinus, 'click', function( event ) {
         var nCell = jQuery( this ).parents( sTd );
-        
         self._fnDeleteLine( nCell );
     } );
 }
 
+/*
+* Function: _fnInsertNewLine
+* Purpose:  Inserts a new default line at the end of the given cell and saves it
+*           in the DataTable instance.
+* Input(s): node:nCell - the DOM element or jQuery of the cell to be modified
+* Returns:  void
+*
+*/
 SpreadSheet.Column.prototype._fnInsertNewLine = function( nCell ) {
     var aoValues = this.fnValue( nCell );
     
     // Insert a new default value
     aoValues.push( this.sValue );
-    jQuery( nCell ).html( this.fnCreate( aoValues ) );
+    this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
 }
 
+/*
+* Function: _fnRegisterMinus
+* Purpose:  Removes a cell at the end of the given input cell and saves the 
+*           result in the respective DataTable instance. This is only done as 
+*           long as there are at least two cells in the table.
+* Input(s): node:nCell - the cell to be modified
+* Returns:  void
+*
+*/
 SpreadSheet.Column.prototype._fnDeleteLine = function( nCell ) {
     var aoValues = this.fnValue( nCell );
     
     // Can we remove an element - i.e. at least two in there?
     if ( aoValues.length > 1 ) {
-        aoValues = aoValues.slice( 0, aoValues.length - 1 )
+        aoValues = aoValues.slice( 0, aoValues.length - 1 );
+        this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
     }
-    jQuery( nCell ).html( this.fnCreate( aoValues ) );
+}
+
+/*
+* Function: _fnKeyin
+* Purpose:  Function to be executed when a cell gets a 'keyin' event. This event
+*           is a custom invention to support cell focusing when a user interacts
+*           with the sheet using the keyboard.
+* Input(s): node:nCell - the cell getting the keyin event
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype.fnKeyin = function( nCell ) {
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+    var nInput = jQuery( nCell ).find( sInput ).last();
+    
+    nInput.click();
+}
+
+/*
+* Function: _fnKeyout
+* Purpose:  Function to be executed when a cell gets a 'keyout' event. It is a
+*           custom invention to support cell defocusing when a user interacts
+*           with the sheet using the keyboard and is about to leave a cell.
+* Input(s): node:nCell - the cell getting the keyout event
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype.fnKeyout = function( nCell ) {
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+    var nInput = jQuery( nCell ).find( sInput );
+    
+    nInput.blur();
 }
 
 /*
@@ -557,16 +691,20 @@ function SpreadSheet( sId, oInit ) {
         this._aoColumns[i].sValue = 'bar';
     }
     this.fnInsertNewLine();
-        this.fnInsertNewLine();
-            this.fnInsertNewLine();
-                this.fnInsertNewLine();
-                    this.fnInsertNewLine();
-                        this.fnInsertNewLine();
-                            this.fnInsertNewLine();
-                this.fnInsertNewLine();
-                    this.fnInsertNewLine();
-                        this.fnInsertNewLine();
-                            this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
+    this.fnInsertNewLine();
 }
 
 /*
@@ -691,15 +829,37 @@ SpreadSheet.prototype._fnRegisterClicks = function( nTable ) {
     // all sub cells that are clickable
     var sTd = ' td.' + SpreadSheet.CSS.Clickable;
 
-    jQuery( sId ).delegate( sTd, 'focusin', function( event ) {
-        self._fnFocusin( event.currentTarget );
+    // TODO: rethink me! Click in a cell on input and then on another input cell
+    jQuery( sId ).delegate( sTd, 'focus', function( event ) {
+        var nTarget = jQuery( event.currentTarget );
+        var iX = nTarget.parent().children().index( nTarget );
+        
+        if ( !self._aoColumns[ iX ].bProtected ) {
+            self._fnFocusin( nTarget );
+        }
     } );
     
     jQuery( sId ).delegate( sTd, 'focusout', function( event ) {
-        self._fnFocusout( event.currentTarget );
+        var nTarget = jQuery( event.currentTarget );
+        var iX = nTarget.parent().children().index( nTarget );
+        
+        if ( !self._aoColumns[ iX ].bProtected ) {
+            self._fnFocusout( nTarget );
+        }
     } );
 }
 
+/*
+* Function: _fnRegisterKeyboard
+* Purpose:  Register keyboard callbacks on all cells of this table. The callback 
+*           itself will just simply forward the click event directly to the 
+*           respective column object, after blurring any current focused cell,
+*           setting the focus to the focused cell and looking up the cell in the
+*           DataTable.
+* Input(s): node:nTable - the jQuery set of the table root node
+* Returns:  void
+*
+*/
 SpreadSheet.prototype._fnRegisterKeyboard = function( nTable ) {
     var self = this;
 
@@ -707,42 +867,244 @@ SpreadSheet.prototype._fnRegisterKeyboard = function( nTable ) {
         // find focused cells and look up whether they belong to our table
         var nFocus = jQuery( 'td.' + SpreadSheet.CSS.Focus );
         var nTable = nFocus.parents( '#' + self.fnGetId() );
-        if ( nTable.length < 0 ) return;
-        
-        // remove focus on all cells
-        nFocus.each( function( iIndex, nCell ) {
-            self._fnFocusout( nCell );
-        } );
-        
-        // Shift + Tab
-        if ( event.shiftKey && event.which == jQuery.ui.keyCode.TAB ) {
+        if ( nTable.length <= 0 ) return;
+
+        // Escape
+        if ( event.which == jQuery.ui.keyCode.ESCAPE ) {
+            self._fnKeyoutAll( nFocus );
             event.preventDefault();
-            
+        //Enter
+        } else if ( event.which == jQuery.ui.keyCode.ENTER ) {
+            self._fnKeyoutAll( nFocus );
+            self._fnEnter( nFocus );
+            event.preventDefault();
+        // Shift + Tab
+        } else if ( event.shiftKey && event.which == jQuery.ui.keyCode.TAB ) {
+            // here
+            self._fnKeyoutAll( nFocus );
+            self._fnMoveLeft( nFocus );
+            event.preventDefault();
         // Tab
         } else if ( event.which == jQuery.ui.keyCode.TAB ) {
+            self._fnKeyoutAll( nFocus );
+            self._fnMoveRight( nFocus );
             event.preventDefault();
-            
         // Up arrow
         } else if ( event.which == jQuery.ui.keyCode.UP ) {
+            self._fnKeyoutAll( nFocus );
             self._fnMoveUp( nFocus );
             event.preventDefault();
-            
         // Down arrow
         } else if ( event.which == jQuery.ui.keyCode.DOWN ) {
+            self._fnKeyoutAll( nFocus );
             self._fnMoveDown( nFocus );
             event.preventDefault();
         }
     } );
 }
 
-SpreadSheet.prototype._fnFocusin = function( nTd ) {
-    jQuery( nTd ).addClass( SpreadSheet.CSS.Focus );
+/*
+* Function: _fnEnter
+* Purpose:  Defines what happens when a person hits the enter button - i.e. move
+*           down if another cell is there or introduce a new one first and then 
+*           move.
+* Input(s): node:nCell - the cell that was focused when the enter key was hit
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnEnter = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iEnd = oSettings._iDisplayEnd;
+    var iItems = iEnd - oSettings._iDisplayStart;
+    var iTotalItems = oSettings.aoData.length;
+    
+    var oColumn = this._aoColumns[ iX ];
+    
+    if ( iY == iItems - 1 && iEnd == iTotalItems ) {
+        this.fnInsertNewLine( false );
+        this._oDataTable.fnPageChange( 'last' );
+        
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.last().children().eq( iX );
+        
+        this._fnFocusin( nNewCell );
+        oColumn.fnKeyin( nNewCell );
+    } else {
+        this._fnMoveDown( nCell );
+    }
 }
 
+/*
+* Function: _fnKeyoutAll
+* Purpose:  Sends a 'Keyout' event to all passed cells
+* Input(s): node:nFocus - the nodes
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnKeyoutAll = function( nFocus ) {
+    var self = this;
+    
+    nFocus.each( function( iIndex, nCell ) {
+        var iColumn = self._oDataTable.fnGetPosition( nCell )[ 2 ];
+        self._aoColumns[ iColumn ].fnKeyout( nCell );
+    } );
+}
+
+/*
+* Function: _fnFocusout
+* Purpose:  Remove the focus from the one passed cell
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
 SpreadSheet.prototype._fnFocusout = function( nTd ) {    
     jQuery( nTd ).removeClass( SpreadSheet.CSS.Focus );
 }
 
+/*
+* Function: _fnFocusin
+* Purpose:  Add the focus to the passed cell
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnFocusin = function( nTd ) {
+    jQuery( nTd ).addClass( SpreadSheet.CSS.Focus );
+}
+
+/*
+* Function: _fnMoveLeft
+* Purpose:  This function gets a cell as an input and moves the focus from it to
+*           another cell to the left. While doing so it keeps track of out of 
+*           bounds checks, pagination, readonly columns and row skips for the 
+*           previously mentioned possible column skips.
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveLeft = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iStart = oSettings._iDisplayStart;
+    var iPerPage = oSettings._iDisplayLength;
+    
+    var iMovedX = iX;
+    var iMovedY = iY;
+    
+    // Calculate the next free cell
+    do {
+        iMovedX--;
+        if ( iMovedX < 0 ) {
+            iMovedX = this._aoColumns.length - 1;
+            iMovedY--;
+        }
+    } while ( this._aoColumns[ iMovedX ].bProtected );
+    var oColumn = this._aoColumns[ iMovedX ];
+    var nNewCell = nCell;
+    
+    // We stay on the same page after the move
+    if ( iMovedY >= 0 ) {
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+        
+    // Top most cell
+    } else if ( iMovedY < 0 && iStart == 0 ) {
+        oColumn = this._aoColumns[ iX ];
+        nNewCell = anRows.eq( iY ).children().eq( iX );
+        
+    // We have to flip the page first
+    } else if ( iMovedY < 0 && iStart > 0 ) {
+        this._oDataTable.fnPageChange( 'previous' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iMovedX );
+    }
+    
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
+}
+
+/*
+* Function: _fnMoveRight
+* Purpose:  This function gets a cell as an input and moves the focus from it to
+*           another cell to the right. While doing so it keeps track of out of 
+*           bounds checks, pagination, readonly columns and row skips for the 
+*           previously mentioned possible column skips. If the user tabs right 
+*           on the very last cells the script will introduce a new line at the 
+*           very end and will focus on it.
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveRight = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iItems = oSettings._iDisplayEnd - oSettings._iDisplayStart;
+    var iPerPage = oSettings._iDisplayLength;
+    var iTotalItems = oSettings.aoData.length;
+    
+    var iMovedX = iX;
+    var iMovedY = iY;
+    
+    do {
+        iMovedX++;
+        if ( iMovedX >= this._aoColumns.length ) {
+            iMovedX = 0;
+            iMovedY++;
+        }
+    } while ( this._aoColumns[ iMovedX ].bProtected );
+    var oColumn = this._aoColumns[ iMovedX ];
+    var nNewCell = nCell;
+    
+    // just go down if we can
+    if ( iMovedY < iItems ) {
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    
+    // very last cell, introduce new line on the same page
+    } else if ( iMovedY >= iItems &&  iItems < iPerPage ) {
+        this.fnInsertNewLine();
+        this._oDataTable.fnPageChange( 'last' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    
+    // very last cell, introduce new line on the next page
+    } else if ( iMovedY >= iItems && iTotalItems % iPerPage == 0 ) {
+        this.fnInsertNewLine();
+        this._oDataTable.fnPageChange( 'last' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
+        
+    // flip the page
+    } else if ( iMovedY >= iItems && iTotalItems % iPerPage > 0 ) {
+        this._oDataTable.fnPageChange( 'next' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
+    }
+    
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
+}
+
+/*
+* Function: _fnMoveUp
+* Purpose:  Moves the focus cursor from the passed cell one up. While doing so 
+*           it takes into account pagination and out-of-bounds checks for the 
+*           top most cell
+* Input(s): node:nCell - the cell to move up from
+* Returns:  void
+*
+*/
 SpreadSheet.prototype._fnMoveUp = function( nCell ) {
     var nRow = nCell.parent();
     var anRows = nRow.parent().children();
@@ -753,22 +1115,38 @@ SpreadSheet.prototype._fnMoveUp = function( nCell ) {
     var iStart = oSettings._iDisplayStart;
     var iPerPage = oSettings._iDisplayLength;
     
+    var oColumn = this._aoColumns[ iX ];
+    var nNewCell = nCell;
+    
     // Same page just one row up; if available
     if ( iY > 0 ) {
-        this._fnFocusin( anRows.eq( iY - 1 ).children().eq( iX ) );
+        nNewCell = anRows.eq( iY - 1 ).children().eq( iX );
         
     // First page; refocus top most cell
     } else if ( iY == 0 && iStart == 0 ) {
-        this._fnFocusin( anRows.eq( 0 ).children().eq( iX ) );
+        nNewCell = anRows.eq( 0 ).children().eq( iX );
     
     // Previous page; down most cell   
     } else if ( iY == 0 && iStart > 0 ) {
         this._oDataTable.fnPageChange( 'previous' );
         anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        this._fnFocusin( anRows.eq( iPerPage - 1 ).children().eq( iX ) );
+        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iX );
     }
+    
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
 }
 
+/*
+* Function: _fnMoveDown
+* Purpose:  Moves the focus cursor from the passed cell one down. While doing so 
+*           it takes into account pagination and out-of-bounds checks for the 
+*           very last cell. This call DOES NOT introduce a new line when 
+*           reaching the end of the table but will rather refocus on it.
+* Input(s): node:nCell - the cell to move up from
+* Returns:  void
+*
+*/
 SpreadSheet.prototype._fnMoveDown = function( nCell ) {
     var nRow = nCell.parent();
     var anRows = nRow.parent().children();
@@ -780,21 +1158,26 @@ SpreadSheet.prototype._fnMoveDown = function( nCell ) {
     var iTotalItems = oSettings.aoData.length;
     var iPerPage = oSettings._iDisplayLength;
     
+    var oColumn = this._aoColumns[ iX ];
+    var nNewCell = nCell;
+    
     // Same page just one row down
     if ( iY >= 0 && iY < iItems - 1 ) {
-        this._fnFocusin( anRows.eq( iY + 1 ).children().eq( iX ) );
-        
+        nNewCell = anRows.eq( iY + 1 ).children().eq( iX );
     // End of page or Would have to flip page; but no row available
     } else if ( iY >= 0 && iY == iItems - 1 && 
               ( iItems < iPerPage || iTotalItems % iPerPage == 0 ) ) {
-        this._fnFocusin( anRows.eq( iItems - 1 ).children().eq( iX ) );
+        nNewCell = anRows.eq( iItems - 1 ).children().eq( iX );
 
     // Have to flip page; and another row is available
     } else if ( iY >= 0 && iY == iItems - 1 && iTotalItems % iPerPage > 0 ) {
         this._oDataTable.fnPageChange( 'next' );
         anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        this._fnFocusin( anRows.eq( 0 ).children().eq( iX ) );
+        nNewCell = anRows.eq( 0 ).children().eq( iX );
     }
+    
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
 }
 
 /*
@@ -885,17 +1268,21 @@ SpreadSheet.prototype._fnMakeDrawCallback = function() {
 * Function: fnInsertNewLine
 * Purpose:  Inserts a new line at the end of the table containing default cells 
 *           for each column.
-* Input(s): void
-* Returns:  asCell - an array containing the inserted cells as string
+* Input(s): boolean:bRedraw - a flag indicating whether to redraw the table 
+                              after inserting the line. Default: true. NOTE:
+                              when redraw is true pagination and sorting will be
+                              reset immediately.
+* Returns:  array string:asCell - an array containing the inserted cells
 *
 */
-SpreadSheet.prototype.fnInsertNewLine = function() {
+SpreadSheet.prototype.fnInsertNewLine = function( bRedraw ) {
+    if ( typeof bRedraw === 'undefined' ) bRedraw = true;
     var asCells = [];
         
     for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
         asCells.push( this._aoColumns[i].fnCreate() );
     }
-    this._oDataTable.fnAddData( asCells );
+    this._oDataTable.fnAddData( asCells, bRedraw );
     
     return asCells;
 }
@@ -904,12 +1291,38 @@ SpreadSheet.prototype.fnInsertNewLine = function() {
 * Function: fnGetId
 * Purpose:  Returns the HTML id of the passed node or the id of the table that 
 *           contains the SpreadSheet if argument is undefined
-* Input(s): nNode - the node to get the id of
-* Returns:  sId - the id
+* Input(s): node:nNode - the node to get the id of
+* Returns:  stringLsId - the id
 *
 */
 SpreadSheet.prototype.fnGetId = function( nNode ) {
     if ( typeof nNode === 'undefined' ) nNode = this._nTable;
 
     return jQuery( nNode ).attr( 'id' );
+}
+
+/*
+* Function: fnUpdate
+* Purpose:  Updates a given cell with the newly passed content. It will be 
+*           directly reflected on the underlying DataTable instance, by default
+*           without a table redraw to keep the focus and clicks on the table.
+* Input(s): node:nCell - the cell to be updated
+*           string:sNew - new content as string
+*           boolean:bRedraw - parameter telling whether to redraw the table
+* Returns:  void
+*
+*/
+SpreadSheet.prototype.fnUpdate = function( nCell, sNew, bRedraw ) {
+    if ( typeof bRedraw === 'undefined' ) bRedraw = false;
+    nCell = jQuery( nCell )[ 0 ];
+    
+    var aiPosition = this._oDataTable.fnGetPosition( nCell );
+    var iRow = aiPosition[ 0 ];
+    var iColumn = aiPosition[ 2 ] ;
+    
+    try {
+        this._oDataTable.fnUpdate( sNew, iRow, iColumn, bRedraw );
+    } catch ( error ) {
+        this._oDataTable.fnDraw( false );
+    }
 }
