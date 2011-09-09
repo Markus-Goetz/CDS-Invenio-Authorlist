@@ -91,6 +91,27 @@ span.SpreadSheet.Checkbox {
     margin : 0px auto;
 }
 
+div.Select {
+    position : relative;
+}
+
+select.AuthorlistSelect {
+    width : 100%;
+    margin : 0;
+}
+
+span.AuthorlistText {
+    position : absolute;
+    top : 0;
+    left : 0;
+}
+
+span.AuthorlistIcon.ui-icon.ui-icon-circle-triangle-s {
+    position : absolute;
+    top : 0;
+    right : 0;
+}
+
 .Focus {
     border : 1px dashed gray;
 }

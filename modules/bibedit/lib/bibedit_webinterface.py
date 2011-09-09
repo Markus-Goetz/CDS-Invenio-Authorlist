@@ -239,26 +239,25 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
 <script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.js"></script> 
 <script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.ColVis.min.js"></script>
 <script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/authorlist.spreadSheet.new.js"></script>
+<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/authorlist_select.js"></script>
 <script type="text/javascript"> 
-   jQuery( document).ready( function() {
-       jQuery( '.moo' ).live( 'click', function( event ) {
-            console.log( event );
-       } );
-   
+   jQuery( document).ready( function() {   
        spreadSheet = new SpreadSheet( 'authorlist', {
             columns : [ {
                 'title' : 'Simple',
                 'value' : 'simple foo',
                 'readonly' : true
             }, {
-                'title' : 'Readonly',
-                'value' : 'extendable foo',
+                'title' : 'Checkbox',
+                'value' : true,
                 'width' : '15%',
-                'readonly' : true
+                'type'  : 'checkbox'
             },{
-                'title' : 'Readonly',
-                'value' : 'extendable foo',
-                'width' : '15%',
+                'title' : 'Select',
+                'value' : 'a',
+                'type'  : 'select',
+                'options' : [ 'b', 'c', 'd', 'e' ],
+                'extendable' : true
             }, {
                 'title' : 'Extendable',
                 'value' : 'extendable foo',
