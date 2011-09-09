@@ -244,6 +244,9 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
    jQuery( document).ready( function() {   
        spreadSheet = new SpreadSheet( 'authorlist', {
             columns : [ {
+                'title' : 'Index',
+                'type'  : 'increment',
+            }, {
                 'title' : 'Simple',
                 'value' : 'simple foo',
                 'readonly' : true

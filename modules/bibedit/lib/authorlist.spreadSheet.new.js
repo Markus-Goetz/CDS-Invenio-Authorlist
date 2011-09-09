@@ -529,9 +529,12 @@ SpreadSheet.IncrementColumn = function( oInit ) {
     // objects
     this.oSpreadSheet = oInit.oSpreadSheet;
     
-    // string
-    this.sValue = oInit.value;
-    this.sIncrement = oInit.increment;
+    // integer
+    var value = oInit.value;
+    var inc = oInit.increment;
+    
+    this.iValue = typeof value !== 'undefined' ? parseInt( value ) : 1;
+    this.iIncrement = typeof inc !== 'undefined' ? parseInt( inc ) : 1;
     
     // booleans
     this.bExtendable = false;
@@ -549,20 +552,45 @@ SpreadSheet.IncrementColumn.prototype.constructor = SpreadSheet.IncrementColumn;
 * Returns:  node:nCell - the cell content as a jQuery node
 *
 */
-SpreadSheet.IncrementColumn.prototype._fnCreateCell = function( sValue ) {
+SpreadSheet.IncrementColumn.prototype._fnCreateCell = function( iValue ) {
     var nCell = jQuery( '<div>' );
     var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
                       SpreadSheet.CSS.Increment,
                       this.sType ];
                       
-    if ( typeof sValue === 'undefined' ) {
-        sValue = this.sValue;
+    if ( typeof iValue === 'undefined' ) {
+        iValue = this.iValue;
+    } else {
+        iValue = this.iValue + iValue * this.iIncrement;
     }
-    nCell.text( sValue );
+    nCell.text( iValue );
     nCell.addClass( asClasses.join( ' ' ) );
     
     return nCell;
 }
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.IncrementColumn.prototype.fnValue = function( oData ) {
+    var anCells = jQuery( 'div.' + SpreadSheet.CSS.Increment, jQuery( oData ) );
+    
+    return parseInt( anCells.text() );
+}
+
+// These callbacks are not required for increment columns. We will make sure 
+// that no strange things happen and put empty stubs here.
+SpreadSheet.IncrementColumn.prototype._fnRegisterClick = function( sTable, sTd ) {}
+SpreadSheet.IncrementColumn.prototype._fnRegisterBlur = function( sTable, sTd ) {}
+SpreadSheet.IncrementColumn.prototype.fnKeyin = function( nCell ) {}
+SpreadSheet.IncrementColumn.prototype.fnKeyout = function( nCell ) {}
 
 
 
@@ -1502,7 +1530,14 @@ SpreadSheet.prototype.fnInsertNewLine = function( bRedraw ) {
     var asCells = [];
         
     for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
-        asCells.push( this._aoColumns[i].fnCreate() );
+        var oColumn = this._aoColumns[ i ];
+        var iLines = this._oDataTable.fnSettings().aoData.length;
+        
+        if ( oColumn instanceof SpreadSheet.IncrementColumn ) {
+            asCells.push( oColumn.fnCreate( iLines ) );
+        } else {
+            asCells.push( oColumn.fnCreate() );
+        }
     }
     this._oDataTable.fnAddData( asCells, bRedraw );
     
