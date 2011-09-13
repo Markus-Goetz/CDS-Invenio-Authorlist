@@ -244,12 +244,17 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
    jQuery( document).ready( function() {   
        spreadSheet = new SpreadSheet( 'authorlist', {
             columns : [ {
+                'type'  : 'edit',
+            }, {
                 'title' : 'Index',
                 'type'  : 'increment',
             }, {
-                'title' : 'Simple',
+                'title' : 'Text Select',
+                'type'  : 'textselect',
+                'text'  : 'muh',
                 'value' : 'simple foo',
-                'readonly' : true
+                'options'   : [ 'asd', 'xcv' ],
+                'extendable'    : true
             }, {
                 'title' : 'Checkbox',
                 'value' : true,

@@ -14,15 +14,20 @@ SpreadSheet.CSS = {
     'Content'               : 'Content',
     'Clickable'             : 'Clickable',
     'Focus'                 : 'Focus',
+    'RowFocus'              : 'RowFocus',
+    'ColumnFocus'           : 'ColumnFocus',
     
+    // Content class
     'Text'                  : 'Text',
     'Edit'                  : 'Edit',
     'Increment'             : 'Increment',
     'Select'                : 'Select',
     'Checkbox'              : 'Checkbox',
-    'Complex'               : 'Complex',
-    'Extendable'            : 'Extendable',
+    'TextSelect'            : 'TextSelect',
+    'TextSelectText'        : 'TextSelectText',
+    'TextSelectSelect'      : 'TextSelectSelect',
     
+    'Extendable'            : 'Extendable',
     'Readonly'              : 'Readonly',
     
     // jQuery UI classes
@@ -45,7 +50,7 @@ SpreadSheet.CSS = {
 
 
 /*
-* Function: SpreadSheetColumn
+* Function: SpreadSheet.Column
 * Purpose:  Constructor
 * Input(s): object:oInit - Initialization settings for a column
 * Returns:  SpreadSheetColumn instance when called with new, else undefined
@@ -167,10 +172,8 @@ SpreadSheet.Column.prototype.fnCompare = function( oA, oB, self ) {
 *
 */
 SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
-    // If we do not pass a value, it will create a default cell
-    if ( typeof oValue === 'undefined' ) oValue = this.sValue;
     // Extendable cells expect arrays as value
-    if ( this.bExtendable && !jQuery.isArray( oValue ) ) oValue = [ oValue ];
+    if ( this.bExtendable && typeof oValue === 'undefined' ) oValue = [ oValue ];
 
     var nWrapper = jQuery( '<div>' );
     nWrapper.addClass( SpreadSheet.CSS.Wrapper );
@@ -231,6 +234,8 @@ SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
 *
 */
 SpreadSheet.Column.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
     var nCell = jQuery( '<input type="text" value="' + sValue + '">' );
     var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
                       SpreadSheet.CSS.Text, 
@@ -517,7 +522,7 @@ SpreadSheet.Column.prototype.fnKeyout = function( nCell ) {
 
 
 /*
-* Function: SpreadSheetIncrementColumn
+* Function: SpreadSheet.IncrementColumn
 * Purpose:  Constructor
 * Input(s): object:oInit - Initialization settings for a column
 * Returns:  SpreadSheetIncrementColumn instance when called with new
@@ -528,6 +533,9 @@ SpreadSheet.IncrementColumn = function( oInit ) {
     
     // objects
     this.oSpreadSheet = oInit.oSpreadSheet;
+    
+    // string
+    this.sWidth = oInit.width || '50px';
     
     // integer
     var value = oInit.value;
@@ -601,7 +609,83 @@ SpreadSheet.IncrementColumn.prototype.fnKeyout = function( nCell ) {}
 
 
 /*
-* Function: SpreadSheetCheckboxColumn
+* Function: SpreadSheet.EditColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetEditColumn instance when called with new; else undefined
+*
+*/
+SpreadSheet.EditColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // objects
+    this.oSpreadSheet = oInit.oSpreadSheet;
+    
+    // strings
+    this.sTitle = typeof oInit.title === 'string' ? oInit.title : ' ';
+    this.sWidth = oInit.width || '50px';
+    
+    // booleans
+    this.bExtendable = false;
+    this.bProtected = true;
+    this.bSearchable = false;
+    this.bSortable = false;
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.EditColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.EditColumn.prototype.constructor = SpreadSheet.EditColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a simple div 
+*           containing three buttons up, down and delete
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.EditColumn.prototype._fnCreateCell = function( oValue ) {
+    var nCell = jQuery( '<div>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Edit,
+                      this.sType ];
+    nCell.addClass( asClasses.join( ' ' ) );
+    
+    var nUp = jQuery( '<span>' );
+    nUp.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Up );
+    var nDown = jQuery( '<span>' );
+    nDown.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Down );
+    var nDelete = jQuery( '<span>' );
+    nDelete.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Delete );
+    
+    nCell.append( nUp, nDown, nDelete );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.EditColumn.prototype.fnValue = function( oData ) {
+    return '';
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.CheckboxColumn
 * Purpose:  Constructor
 * Input(s): object:oInit - Initialization settings for a column
 * Returns:  SpreadSheetCheckboxColumn instance when called with new, 
@@ -632,6 +716,8 @@ SpreadSheet.CheckboxColumn.prototype.constructor = SpreadSheet.CheckboxColumn;
 *
 */
 SpreadSheet.CheckboxColumn.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
     var nCell = jQuery( '<span>' );
     var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
                       SpreadSheet.CSS.Icon,
@@ -731,7 +817,6 @@ SpreadSheet.CheckboxColumn.prototype.fnKeyin = function( nCell ) {
 *           nothing to do
 * Input(s): node:nCell - the cell getting the keyout event
 * Returns:  void
-*
 */
 SpreadSheet.CheckboxColumn.prototype.fnKeyout = function( nCell ) {
     // Nothing to do
@@ -746,7 +831,7 @@ SpreadSheet.CheckboxColumn.prototype.fnKeyout = function( nCell ) {
 
 
 /*
-* Function: SpreadSheetSelectColumn
+* Function: SpreadSheet.SelectColumn
 * Purpose:  ConstructorSpreadSheet.CSS.SpreadSheet, 
                       SpreadSheet.CSS.Select,
                       this.sType ]
@@ -779,6 +864,8 @@ SpreadSheet.SelectColumn.prototype.constructor = SpreadSheet.SelectColumn;
 *
 */
 SpreadSheet.SelectColumn.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
     var nCell = jQuery( '<div>' );
     var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
                       SpreadSheet.CSS.Select,
@@ -893,6 +980,142 @@ SpreadSheet.SelectColumn.prototype.fnKeyout = function( nCell ) {
 
 
 /*
+* Function: SpreadSheet.TextSelectColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetTextSelectColumn instance when called with new
+*
+*/
+SpreadSheet.TextSelectColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // strings
+    this.sText = oInit.text || '-';
+    this.sValue = typeof oInit.value !== 'undefined' ? oInit.value : '';
+    this.aOptions = typeof oInit.options !== 'undefined' ? oInit.options : [];
+    if ( jQuery.inArray( this.sValue, this.aOptions ) < 0 ) {
+        this.aOptions.unshift( this.sValue );
+    }
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.TextSelectColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.TextSelectColumn.prototype.constructor = SpreadSheet.TextSelectColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a text input box
+*           preceded by a select box in the same line.
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnCreateCell = function( aValue ) {
+    if ( typeof aValue === 'undefined' ) aValue = [ this.sText, this.sValue ];
+
+    var nCell = jQuery( '<table>' ).addClass( SpreadSheet.CSS.TextSelect );
+    var nRow = jQuery( '<tr>' );
+    var nTextCell = jQuery( '<td>' ).addClass( SpreadSheet.CSS.TextSelectText );
+    var nSelectCell = jQuery( '<td>' ).addClass( SpreadSheet.CSS.TextSelectSelect );    
+
+    var nInput = jQuery( '<input type="text" value="' + aValue[ 0 ] + '">' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Text, 
+                      SpreadSheet.CSS.Readonly,
+                      this.sType ];            
+    nInput.attr( {
+        'class'     : asClasses.join( ' ' ),
+        'readonly'  : 'readonly'
+    } );
+    
+    var nSelect = jQuery( '<div>' );
+    asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                  SpreadSheet.CSS.Select,
+                  this.sType ];
+    nSelect.authorlist_select( {
+        'value'         : aValue[ 1 ],
+        'options'       : this.aOptions
+    } );
+    nSelect.addClass( asClasses.join( ' ' ) );
+    
+    nCell.append( nRow );
+    nRow.append( nTextCell, nSelectCell );
+    nTextCell.append( nInput );
+    nSelectCell.append( nSelect );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.TextSelectColumn.prototype.fnValue = function( oData ) {
+    var anInput = jQuery( 'input.' + SpreadSheet.CSS.Text, jQuery( oData ) );
+    var anSelect = jQuery( 'select', jQuery( oData ) );
+    
+    // Individual cell? A simple val will do - returns the first result
+    if ( !this.bExtendable ) {
+        return [ anInput.val(), anSelect.val() ];
+    }
+    
+    // Extendable cell? Then we have to get the value of each of the cells
+    var iLength = Math.min( anInput.length, anSelect.length )
+    var aoResults = [];
+    for ( var i = 0, iLen = iLength; i < iLen; i++ ) {
+        aoResults.push( [ jQuery( anInput[ i ] ).val(), 
+                          jQuery( anSelect[ i ] ).val() ] );
+    }
+    
+    return aoResults;
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will save the updated select box in the DataTable instance 
+*           as soon as we get the change event of any of the contained select 
+*           boxes.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    SpreadSheet.Column.prototype._fnRegisterClick.call( this, sTable, sTd );
+    SpreadSheet.SelectColumn.prototype._fnRegisterClick.call( this, sTable, sTd );
+}
+
+/*
+* Function: _fnInsertNewLine
+* Purpose:  Inserts a new default line at the end of the given cell and saves it
+*           in the DataTable instance.
+* Input(s): node:nCell - the DOM element or jQuery of the cell to be modified
+* Returns:  void
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnInsertNewLine = function( nCell ) {
+    var aoValues = this.fnValue( nCell );
+    
+    // Insert a new default value
+    aoValues.push( [ this.sText, this.sValue ] );
+    this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
+}
+
+
+
+
+
+
+
+
+
+/*
 * Variable: SpreadSheet.ColumnTypes
 * Purpose:  Lookup table to determine the handling prototype for a certain 
 *           column type.
@@ -901,8 +1124,10 @@ SpreadSheet.SelectColumn.prototype.fnKeyout = function( nCell ) {
 SpreadSheet.ColumnTypes = {
     'text'                  : SpreadSheet.Column,
     'increment'             : SpreadSheet.IncrementColumn,
+    'edit'                  : SpreadSheet.EditColumn,
     'checkbox'              : SpreadSheet.CheckboxColumn,
     'select'                : SpreadSheet.SelectColumn,
+    'textselect'            : SpreadSheet.TextSelectColumn,
     
     'default'               : SpreadSheet.Column
 }
@@ -1114,7 +1339,8 @@ SpreadSheet.prototype._fnRegisterKeyboard = function( nTable ) {
 
         // Escape
         if ( event.which == jQuery.ui.keyCode.ESCAPE ) {
-            self._fnKeyoutAll( nFocus );
+            self._fnFocusout( nFocus );
+            self._fnEscape( nFocus );
             event.preventDefault();
         //Enter
         } else if ( event.which == jQuery.ui.keyCode.ENTER ) {
@@ -1183,13 +1409,13 @@ SpreadSheet.prototype._fnEnter = function( nCell ) {
 }
 
 /*
-* Function: _fnKeyoutAll
+* Function: _fnEscape
 * Purpose:  Sends a 'Keyout' event to all passed cells
 * Input(s): node:nFocus - the nodes
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnKeyoutAll = function( nFocus ) {
+SpreadSheet.prototype._fnEscape = function( nFocus ) {
     var self = this;
     
     nFocus.each( function( iIndex, nCell ) {
@@ -1205,8 +1431,16 @@ SpreadSheet.prototype._fnKeyoutAll = function( nFocus ) {
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnFocusout = function( nTd ) {    
-    jQuery( nTd ).removeClass( SpreadSheet.CSS.Focus );
+SpreadSheet.prototype._fnFocusout = function( nTd ) {
+    var nCell = jQuery( nTd );
+    var nRow = nCell.parent();
+    var iIndex = nRow.children().index( nCell );
+    var sSelector = 'td.' + SpreadSheet.CSS.Clickable + ':eq(' + iIndex + ')';
+    var nColumn = nRow.parent().children().find( sSelector );
+    
+    nTd.removeClass( SpreadSheet.CSS.Focus );
+    nRow.removeClass( SpreadSheet.CSS.RowFocus );
+    nColumn.removeClass( SpreadSheet.CSS.ColumnFocus );
 }
 
 /*
@@ -1217,7 +1451,15 @@ SpreadSheet.prototype._fnFocusout = function( nTd ) {
 *
 */
 SpreadSheet.prototype._fnFocusin = function( nTd ) {
-    jQuery( nTd ).addClass( SpreadSheet.CSS.Focus );
+    var nCell = jQuery( nTd );
+    var nRow = nCell.parent();
+    var iIndex = nRow.children().index( nCell );
+    var sSelector = 'td.' + SpreadSheet.CSS.Clickable + ':eq(' + iIndex + ')';
+    var nColumn = nRow.parent().children().find( sSelector );
+
+    nTd.addClass( SpreadSheet.CSS.Focus );
+    nRow.addClass( SpreadSheet.CSS.RowFocus );
+    nColumn.addClass( SpreadSheet.CSS.ColumnFocus );
 }
 
 /*
@@ -1477,10 +1719,9 @@ SpreadSheet.prototype._fnCreateDataTable = function( nTable, aoColumns ) {
 */
 SpreadSheet.prototype._fnGetInitialSorting = function( aoColumns ) {
     for ( var i = 0, iLen = aoColumns.length; i < iLen; i++ ) {
-        // TODO: enable again
-        //if ( aoColumns[i] instanceof SpreadSheetIncrementColumn ) {
-        //    return [[ i, 'asc' ]];
-        //}
+        if ( aoColumns[i] instanceof SpreadSheet.IncrementColumn ) {
+            return [[ i, 'asc' ]];
+        }
     }
     return [[ 0, 'asc' ]];
 }

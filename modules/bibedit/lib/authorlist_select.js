@@ -2,7 +2,7 @@
     AuthorlistSelectCSS = {
         'Select'        : 'AuthorlistSelect',
         'Text'          : 'AuthorlistText',
-        'Icon'          : 'AuthorlistIcon ui-icon ui-icon-circle-triangle-s'
+        'Icon'          : 'AuthorlistIcon ui-icon ui-icon-triangle-1-s'
     }
 
     jQuery.fn.extend( {
