@@ -513,6 +513,15 @@ SpreadSheet.Column.prototype.fnKeyout = function( nCell ) {
     nInput.blur();
 }
 
+SpreadSheet.Column.prototype.fnIsDefault = function( sValue ) {
+    if ( !this.bExtendable ) return sValue === this.sValue;
+    
+    for ( var i = 0, iLen = sValue.length; i < iLen; i++ ) {
+        if ( sValue[ i ] !== this.sValue ) return false;
+    }
+    return true;
+}
+
 
 
 
@@ -599,6 +608,9 @@ SpreadSheet.IncrementColumn.prototype._fnRegisterClick = function( sTable, sTd )
 SpreadSheet.IncrementColumn.prototype._fnRegisterBlur = function( sTable, sTd ) {}
 SpreadSheet.IncrementColumn.prototype.fnKeyin = function( nCell ) {}
 SpreadSheet.IncrementColumn.prototype.fnKeyout = function( nCell ) {}
+SpreadSheet.IncrementColumn.prototype.fnIsDefault = function( sValue ) {
+    return true;
+}
 
 
 
@@ -618,11 +630,9 @@ SpreadSheet.IncrementColumn.prototype.fnKeyout = function( nCell ) {}
 SpreadSheet.EditColumn = function( oInit ) {
     SpreadSheet.Column.call(this, oInit);
     
-    // objects
-    this.oSpreadSheet = oInit.oSpreadSheet;
-    
     // strings
     this.sTitle = typeof oInit.title === 'string' ? oInit.title : ' ';
+    this.sValue = null;
     this.sWidth = oInit.width || '50px';
     
     // booleans
@@ -674,6 +684,38 @@ SpreadSheet.EditColumn.prototype._fnCreateCell = function( oValue ) {
 */
 SpreadSheet.EditColumn.prototype.fnValue = function( oData ) {
     return '';
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will make the clicked input field writeable and select the 
+*           content.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.EditColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sUp = [ 'span', SpreadSheet.CSS.Up ].join( '.' );
+    var sDown = [ 'span', SpreadSheet.CSS.Down ].join( '.' );
+    var sDelete = [ 'span', SpreadSheet.CSS.Delete ].join( '.' );
+
+    jQuery( sTable ).delegate( sUp, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget ).parents( sTd );
+        self.oSpreadSheet.fnExchangeRows( nCell[ 0 ], -1 );
+    } );
+    
+    jQuery( sTable ).delegate( sDown, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget).parents( sTd );
+        self.oSpreadSheet.fnExchangeRows( nCell[ 0 ], 1 );
+    } );
+
+    jQuery( sTable ).delegate( sDelete, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget ).parents( sTd );
+        self.oSpreadSheet.fnDeleteLine( nCell[ 0 ] );
+    } );
 }
 
 
@@ -1107,6 +1149,24 @@ SpreadSheet.TextSelectColumn.prototype._fnInsertNewLine = function( nCell ) {
     this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
 }
 
+SpreadSheet.TextSelectColumn.prototype.fnIsDefault = function( asValue ) {
+    if ( !this.bExtendable ) return this._fnLineIsDefault( asValue );
+    
+    for ( var i = 0, iLen = asValue.length; i < iLen; i++ ) {
+        if ( !this._fnLineIsDefault( asValue[ i ] ) ) return false;
+    }
+    return true;
+}
+
+SpreadSheet.TextSelectColumn.prototype._fnLineIsDefault = function( asValue ) {
+    var asCompare = [ this.sText, this.sValue ];
+    
+    for ( var i = 0, iLen = asCompare.length; i < iLen; i++ ) {
+        if ( asCompare[ i ] !== asValue[ i ] ) return false;
+    }    
+    return true; 
+}
+
 
 
 
@@ -1297,7 +1357,9 @@ SpreadSheet.prototype._fnRegisterClicks = function( nTable ) {
     // all sub cells that are clickable
     var sTd = ' td.' + SpreadSheet.CSS.Clickable;
 
-    // TODO: rethink me! Click in a cell on input and then on another input cell
+    // TODO: rethink me! Click in a cell on an input and then on another input 
+    // in the same cell. On the first click I blur and on the second click I 
+    // will go into edit mode. You want me to behave like this?
     jQuery( sId ).delegate( sTd, 'focus', function( event ) {
         var nTarget = jQuery( event.currentTarget );
         var iX = nTarget.parent().children().index( nTarget );
@@ -1786,6 +1848,76 @@ SpreadSheet.prototype.fnInsertNewLine = function( bRedraw ) {
 }
 
 /*
+* Function: fnDeleteLine
+* Purpose:  Deletes the line that contains the passed cell or the very last row.
+*           Updates all incremental columns on the way.
+* Input(s): node:nCell - the cell whichs parent row shall be deleted
+* Returns:  void
+*
+*/
+SpreadSheet.prototype.fnDeleteLine = function( nCell ) {
+    var iItems = this._oDataTable.fnSettings().aoData.length;    
+    // Do not allow deletions on the very last row
+    if ( iItems <= 1 ) return;
+
+    // Find line to be deleted - i.e. row of cell or very last one
+    if ( typeof nCell !== 'undefined' ) {
+        var iRow = this._oDataTable.fnGetPosition( nCell )[ 0 ];
+    } else {
+        var iRow = iItems - 1;
+    }
+    
+    // Delete the row using the DataTable instance
+    this._oDataTable.fnDeleteRow( iRow );
+    
+    // Update the increment columns
+    // Iterate over all columns
+    for ( var j = 0, jLen = this._aoColumns.length; j < jLen; j++ ) {
+        var oColumn = this._aoColumns[ j ];
+        
+        // Iterate over each row that is an increment column and update it
+        if ( ! (oColumn instanceof SpreadSheet.IncrementColumn) ) continue;
+        for ( var i = iRow; i < iItems - 1; i++ ) {
+            this._oDataTable.fnUpdate( oColumn.fnCreate( i ), i, j, false, false );
+        }
+    }
+    
+    this._oDataTable.fnDraw( false );
+}
+
+/*
+* Function: fnExchangeRows
+* Purpose:  Exchanges the row the contains the given cell with the row that has 
+*           a relative distance to the selected row having the passed offset.
+* Input(s): node:nCell - the cell whichs parent row shall be deleted
+            integer:iOffset - the offset
+* Returns:  void
+*
+*/
+SpreadSheet.prototype.fnExchangeRows = function( nCell, iOffset ) {
+    var iRowA = this._oDataTable.fnGetPosition( nCell )[ 0 ];
+    var iRowB = iRowA + iOffset;
+    var iItems = this._oDataTable.fnSettings().aoData.length;
+    
+    if ( iRowB < 0 || iRowB >= iItems ) return;
+    
+    var asContentA = this._oDataTable.fnGetData( iRowA );
+    var asContentB = this._oDataTable.fnGetData( iRowB );
+    
+    for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
+        var oColumn = this._aoColumns[ i ];
+    
+        if ( ! ( oColumn instanceof SpreadSheet.IncrementColumn ) ) continue;
+        var sBuffer = asContentA[ i ];
+        asContentA[ i ] = asContentB[ i ];
+        asContentB[ i ] = sBuffer;
+    }
+    
+    this._oDataTable.fnUpdate( asContentA, iRowB, null, false, false );
+    this._oDataTable.fnUpdate( asContentB, iRowA, null, false, true);
+}
+
+/*
 * Function: fnGetId
 * Purpose:  Returns the HTML id of the passed node or the id of the table that 
 *           contains the SpreadSheet if argument is undefined
@@ -1823,4 +1955,27 @@ SpreadSheet.prototype.fnUpdate = function( nCell, sNew, bRedraw ) {
     } catch ( error ) {
         this._oDataTable.fnDraw( false );
     }
+}
+
+SpreadSheet.prototype.fnGetData = function() {
+    var aasData = this._oDataTable.fnGetData();
+    var aaoResult = [];
+
+    for ( var j = 0, jLen = aasData.length; j < jLen; j++ ) {
+        var bValid = false;
+        var aoResult = [];
+                
+        for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
+            var oColumn = this._aoColumns[ i ];
+            var oValue = oColumn.fnValue( aasData[ j ][ i ] );
+            
+            if ( oColumn instanceof SpreadSheet.EditColumn ) continue;
+            aoResult.push( oValue );
+            bValid = bValid || !oColumn.fnIsDefault( oValue );
+        }
+        
+        if ( bValid ) aaoResult.push( aoResult );
+    }
+    
+    return aaoResult;
 }

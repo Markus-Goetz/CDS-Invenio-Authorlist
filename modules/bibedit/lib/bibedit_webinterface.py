@@ -253,8 +253,7 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                 'type'  : 'textselect',
                 'text'  : 'muh',
                 'value' : 'simple foo',
-                'options'   : [ 'asd', 'xcv' ],
-                'extendable'    : true
+                'options'   : [ 'asd', 'xcv' ]
             }, {
                 'title' : 'Checkbox',
                 'value' : true,
@@ -264,15 +263,19 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                 'title' : 'Select',
                 'value' : 'a',
                 'type'  : 'select',
-                'options' : [ 'b', 'c', 'd', 'e' ],
-                'extendable' : true
+                'options' : [ 'b', 'c', 'd', 'e' ]
             }, {
                 'title' : 'Extendable',
                 'value' : 'extendable foo',
-                'width' : '40%',
-                'extendable' : true
+                'width' : '40%'
             }, ]
        } );
+       
+       var button = jQuery( '<button type="button">Click</input>' );
+       button.click( function() {
+            console.log( spreadSheet.fnGetData() );
+       } );
+       jQuery( 'body' ).append( button );
    });
 </script>""",           body          = authorlist_templates.body(),
                         errors        = [],

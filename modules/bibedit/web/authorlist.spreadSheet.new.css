@@ -110,6 +110,8 @@ span.AuthorlistIcon.ui-icon.ui-icon-triangle-1-s {
 
 table.TextSelect {
     width : 100%;
+    border-spacing : 0px;
+    border-collapse : collapse;
 }
 
 td.TextSelectText {
