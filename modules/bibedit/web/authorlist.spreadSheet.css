@@ -1,6 +1,16 @@
 .SpreadSheet {
 	font-family : 'Trebuchet MS', Helvetica, sans-serif;
-	font-size : 9pt;
+	font-size : 11pt;
+}
+
+div.dataTables_wrapper {
+    min-height : 0px;
+    height : auto;
+    margin : 20px 0px;
+}
+
+div.ColVis {
+	width : 15px;
 }
 
 table.SpreadSheet {
@@ -9,49 +19,109 @@ table.SpreadSheet {
 }
 
 table.SpreadSheet td {
-	padding : 0px !important;
+    padding : 0px !important;
+}
+
+table.SpreadSheet td.Clickable {
+    vertical-align : top;
+}
+
+div.Wrapper {
+    position : relative;
+}
+
+table.Content {
+    width : 100%;
+    padding : 0px;
+    border-spacing : 0px;
+    border-collapse: collapse;
+}
+
+td.Extendable {
+    width : 36px;
+}
+
+span.SpreadSheet.Extendable.ui-icon-plus {
+    margin-left : 3px;
+}
+
+input.SpreadSheet.Text {
+    width : 100%;
+    margin : 0px;
+    padding : 0px;
+    text-align : right;
+    border : 0px transparent;
+}
+
+input.SpreadSheet.Text.Readonly {
+    background-color : transparent
 }
 
 div.SpreadSheet.Edit {
-	margin-left : auto;
-	margin-right : auto;
-	width: 50px;
+    width : 48px;
+    margin : 0px auto;
 }
 
-input.SpreadSheet {
-	width : 100%;
-	text-align : right;
-	margin : 0px;
-	padding : 0px;
-	
+span.ui-icon.ui-icon-carat-1-n {
+    float : left;
 }
 
-input.SpreadSheet.ReadOnly {
-	background-color : transparent;
-	border-color : transparent;
+span.ui-icon.ui-icon-carat-1-s {
+    float : left;
 }
 
-
-input.SpreadSheet.Increment {
-	width : 50px;
+span.ui-icon.ui-icon-close {
+    float : left;
 }
 
-select.SpreadSheet {
-	width : 100%;
-	margin : 0px;
-	border-color : #AFAFAF;
+span.SpreadSheet.ui-icon {
+    float : left;
 }
 
-span.SpreadSheet {
-	float : right;
+span.SpreadSheet.Checkbox {
+    float : none;
+    margin : 0px auto;
 }
 
-div.ColVis {
-	width : 15px;
+div.SpreadSheet.Select {
+    position : relative;
 }
 
-div.dataTables_wrapper {
-    min-height : 0px;
-    height : auto;
-    margin : 20px 0px;
+select.AuthorlistSelect {
+    width : 100%;
+    margin : 0;
+    border : 0px;
+}
+
+span.AuthorlistText {
+    position : absolute;
+    top : 0;
+    left : 0;
+    width : 100%;
+    text-align : left;
+}
+
+span.AuthorlistIcon.ui-icon.ui-icon-triangle-1-s {
+    position : absolute;
+    top : 0;
+    right : 0;
+    margin-top : 1px;
+}
+
+table.TextSelect {
+    width : 100%;
+    border-spacing : 0px;
+    border-collapse : collapse;
+}
+
+td.TextSelectText {
+    width : 70%;
+    border-right : 1px solid gray;
+}
+
+td.TextSelectSelect {
+    width : 30%;
+}
+
+td.Focus {
 }

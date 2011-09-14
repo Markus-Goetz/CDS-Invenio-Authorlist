@@ -1,588 +1,1787 @@
 /*
-* File:        SpreadSheet.js
-* Version:     1.0
-* Description: SpreadSheet features for DataTables
-* Author:      Markus Goetz
-* Created:     Fri Jul 22 17:25:02 CEST 2011
-* Modified:    $Date$ by $Author$
-* Language:    Javascript
-* License:     GPL v2 or BSD 3 point style
-* Project:     SpreadSheet
-* 
-* Copyright 2011 Markus Goetz, all rights reserved.
+* Variable: SpreadSheet.CSS
+* Purpose:  Central enumeration and mapping for the CSS classes used in 
+*           SpreadSheet to ease look up and adjustments if needed.
 *
 */
-
-/*
-* Type constants
-*/
-SpreadSheet._oTypes = {
-    'edit' :            'edit',
-    'increment' :       'increment',
-    'text' :            'text',
-    'select' :          'select',
-    'checkbox' :        'checkbox'
-}
-
-/*
-* Default initialization parameters
-*/
-SpreadSheet._oDefaults = {
-    'Focus' :       null
-}
-
-/*
-*  Default column
-*/
-SpreadSheet._oDefaultColumn = {
-    'name' :        '&nbsp',
-    'visible' :     true,
-    'readonly' :    false,
-    'type' :        SpreadSheet._oTypes.text,
-    'value' :       '-',
-    'options' :     null
-}
-
-/*
-* CSS classes for the various objects, right-hand value can be changed to customize the classes
-*/
-SpreadSheet._oCss = {
-    'DataTable' :       'DataTable',
-    'KeyTable' :        'KeyTable',
-    'SpreadSheet' :     'SpreadSheet',
-    'ReadOnly' :        'ReadOnly',
+SpreadSheet.CSS = {
+    // General classes
+    'SpreadSheet'           : 'SpreadSheet',
+    'DataTable'             : 'DataTable',
     
-    'Edit' :            'Edit',
-    'Increment' :       'Increment',
+    // Cell classes
+    'Wrapper'               : 'Wrapper',
+    'Content'               : 'Content',
+    'Clickable'             : 'Clickable',
+    'Focus'                 : 'Focus',
+    'RowFocus'              : 'RowFocus',
+    'ColumnFocus'           : 'ColumnFocus',
     
-    'jQueryIcon' :      'ui-icon',
-    'jQueryDelete' :    'ui-icon-close',
-    'jQueryUp' :        'ui-icon-carat-1-n',
-    'jQueryDown' :      'ui-icon-carat-1-s',
+    // Content class
+    'Text'                  : 'Text',
+    'Edit'                  : 'Edit',
+    'Increment'             : 'Increment',
+    'Select'                : 'Select',
+    'Checkbox'              : 'Checkbox',
+    'TextSelect'            : 'TextSelect',
+    'TextSelectText'        : 'TextSelectText',
+    'TextSelectSelect'      : 'TextSelectSelect',
+    
+    'Extendable'            : 'Extendable',
+    'Readonly'              : 'Readonly',
+    
+    // jQuery UI classes
+    'Icon'                  : 'ui-icon',
+    'Plus'                  : 'ui-icon-plus',
+    'Minus'                 : 'ui-icon-minus',
+    'Up'                    : 'ui-icon-carat-1-n',
+    'Down'                  : 'ui-icon-carat-1-s',
+    'Delete'                : 'ui-icon-close',
+    'Checked'               : 'ui-icon-check',
+    'Unchecked'             : 'ui-icon-closethick'
 }
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.Column
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetColumn instance when called with new, else undefined
+*
+*/
+SpreadSheet.Column = function( oInit ) {
+    if ( typeof oInit === 'undefined' ) return this;
+    
+    // Set the properties of the columns to the passed values or the sane 
+    // defaults. DO NOT change their names as they will be passed directly to 
+    // the DataTables instance and have to HAVE this FORMAT. For more details 
+    // see the jQuery DataTables online documentation.
+    
+    // objects
+    this.oSpreadSheet = oInit.oSpreadSheet;
+    
+    // strings
+    this.sClass = [ oInit.sType, SpreadSheet.CSS.Clickable ].join( ' ' );
+    this.sTitle = typeof oInit.title === 'string' ? oInit.title : '';
+    this.sType = oInit.sType;
+    this.sValue = oInit.value || '-';
+    this.sWidth = oInit.width || null;
+    
+    // booleans
+    this.bExtendable = oInit.extendable || false;
+    this.bProtected = oInit.readonly || false;
+    this.bSearchable = typeof oInit.searchable !== 'undefined' ? oInit.searchable : true;
+    this.bSortable = typeof oInit.sortable !== 'undefined' ? oInit.sortable : true;
+    this.bVisible = typeof oInit.visible !== 'undefined' ? oInit.visible : true;
+    
+    // callbacks
+    var oSort = jQuery.fn.dataTableExt.oSort;    
+    oSort[ this.sType + '-asc' ] = this._fnMakeAscendingSorting();
+    oSort[ this.sType + '-desc' ] = this._fnMakeDescendingSorting();
+    jQuery.fn.dataTableExt.ofnSearch[ this.sType ] = this._fnMakeFilter();
+    this._fnRegisterClicks();
+}
+
+/*
+* Function: _fnMakeFilter
+* Purpose:  Constructs a filter callback to be registered with the DataTable 
+*           instance to allow searching columns. The callback just basically 
+*           parses the value of the column and returns its normalized value.
+* Input(s): void
+* Returns:  function:fnFilterCallback - the filter callback
+*
+*/
+SpreadSheet.Column.prototype._fnMakeFilter = function() {
+    var self = this;
+    
+    return function( sData ) {
+        return self.fnValue( sData ).toString();
+    }
+}
+
+/*
+* Function: _fnMakeAscendingSorting
+* Purpose:  Constructs a sorting callback for ascending sorting. The ascending 
+*           order is equal to the generic sorting order of the fnCompare 
+*           function.
+* Input(s): void
+* Returns:  function:fnAscendingSortingCallback - the sort callback
+*
+*/
+SpreadSheet.Column.prototype._fnMakeAscendingSorting = function() {
+    var self = this;
+    
+    return function( a, b ) {
+        return self.fnCompare( a, b, self );
+    }
+}
+
+/*
+* Function: _fnMakeDescendingSorting
+* Purpose:  Constructs a sorting callback for descending sorting. The sort order
+*           is directly inverse to the generic sort order.
+* Input(s): void
+* Returns:  function:fnDescendingSortingCallback - the sort callback
+*
+*/
+SpreadSheet.Column.prototype._fnMakeDescendingSorting = function() {
+    var self = this;
+    
+    return function( a, b ) {
+        return -1 * self.fnCompare( a, b, self );
+    }
+}
+
+/*
+* Function: fnCompare
+* Purpose:  Generic javascript-style compare function that is able to compare 
+*           two cells that belong to this column. In case that the column is 
+*           of type extendable, we will convert the value of the cell - i.e. 
+*           an array to a string first, to allow a more or less meaningful 
+*           sorting.
+* Input(s): object:oA - the left hand value as string, DOM element or jQuery set
+*           object:oA - the right hand value as string, ...
+* Returns:  integer:iCompare - the javascript-style comparison value
+*
+*/
+SpreadSheet.Column.prototype.fnCompare = function( oA, oB, self ) {
+    if ( typeof self === 'undefined' ) self = this;
+    var a = self.fnValue( oA );
+    var b = self.fnValue( oB );
+    
+    if ( this.bExtendable ) {
+        a = a.toString();
+        b = b.toString();
+    }
+    
+    return a < b ? -1 : ( a > b ? 1 : 0 );
+}
+
+/*
+* Function: fnCreate
+* Purpose:  Creates a new cell of this column with all values set to default.
+* Input(s): node:nNode - the node to be serialized
+* Returns:  string:sInnerHtml - the serialized html of the node
+*
+*/
+SpreadSheet.Column.prototype.fnCreate = function( oValue ) {
+    // Extendable cells expect arrays as value
+    if ( this.bExtendable && typeof oValue === 'undefined' ) oValue = [ oValue ];
+
+    var nWrapper = jQuery( '<div>' );
+    nWrapper.addClass( SpreadSheet.CSS.Wrapper );
+
+    // Not extendable? then return one cell only
+    if ( !this.bExtendable ) {
+        var nContent = jQuery( '<div>' );
+        nContent.addClass( SpreadSheet.CSS.Content );
+        
+        var nCell = this._fnCreateCell( oValue );
+        nContent.append( nCell );
+        nWrapper.append( nContent );
+        
+        return this._fnOuterHtml( nWrapper );
+    }
+
+    // Is extendable? Some layouting required
+    // Create the cell as table. I am scared to say this, but we need it for
+    // layouting reasons. For details google for 'input width display block'
+    var nTable = jQuery( '<table>' );
+    var asClasses = [ SpreadSheet.CSS.Content ];
+    nTable.attr( {
+        'class'     : asClasses.join( ' ' )
+    } );
+
+    for ( var i = 0, iLen = oValue.length; i < iLen; i++ ) {
+        // Create the table row    
+        var nTableRow = jQuery( '<tr>' );
+        nTable.append( nTableRow );
+
+        // Create cell content
+        var nCell = jQuery( '<td>' );
+        nCell.append( this._fnCreateCell( oValue[ i ] ) );
+        nTableRow.append( nCell );
+    
+        // Create add button if required
+        var nExtendable = jQuery( '<td>' );
+        nExtendable.attr( {
+            'class'     : SpreadSheet.CSS.Extendable
+        } );
+        
+        // Have the add button only in the first row
+        if ( i === 0 ) {
+            nExtendable.append( this._fnCreateExtendable() );
+            nTableRow.append( nExtendable );
+        }
+    }
+    
+    nWrapper.append( nTable );
+    return this._fnOuterHtml( nWrapper );
+}
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a text input box
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.Column.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
+    var nCell = jQuery( '<input type="text" value="' + sValue + '">' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Text, 
+                      SpreadSheet.CSS.Readonly,
+                      this.sType ];
+                      
+    nCell.attr( {
+        'class'     : asClasses.join( ' ' ),
+        'readonly'  : 'readonly'
+    } );
+    
+    return nCell;
+}
+
+/*
+* Function: _fnCreateExtendable
+* Purpose:  Creates the neat plus button in the end of cell if this column is 
+*           marked to be a extendable column (bExtendable = true)
+* Input(s): void
+* Returns:  node:nExtendable - the node containing the add button
+*
+*/
+SpreadSheet.Column.prototype._fnCreateExtendable = function() {
+    var nWrapper = jQuery( '<div>' );
+
+    // Plus
+    var nPlus = jQuery( '<span>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Extendable, 
+                      SpreadSheet.CSS.Icon,
+                      SpreadSheet.CSS.Plus,
+                      this.sType ];
+    nPlus.attr( {
+        'class'     : asClasses.join( ' ' )
+    } );
+    
+    // Minus
+    var nMinus = jQuery( '<span>' );
+    asClasses = [ SpreadSheet.CSS.SpreadSheet,
+                  SpreadSheet.CSS.Extendable,
+                  SpreadSheet.CSS.Icon,
+                  SpreadSheet.CSS.Minus,
+                  this.sType ];
+    nMinus.attr( {
+        'class'     : asClasses.join( ' ' )
+    } );
+    
+    // Fill wrapper
+    nWrapper.append( nPlus, nMinus );
+    
+    return nWrapper;
+}
+
+/*
+* Function: _fnOuterHtml
+* Purpose:  Transforms a DOM or jQuery node into its serialized HTML version.
+* Input(s): node:nNode - the node to be serialized
+* Returns:  string:sInnerHtml - the serialized html of the node
+*
+*/
+SpreadSheet.Column.prototype._fnOuterHtml = function( nNode ) {
+    var nDummy = jQuery( '<div>' );
+    nDummy.append( jQuery( nNode ).clone() );
+    
+    return nDummy.html();
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.Column.prototype.fnValue = function( oData ) {
+    var anCells = jQuery( 'input.' + SpreadSheet.CSS.Text, jQuery( oData ) );
+    
+    // Individual cell? A simple val will do - returns the first result
+    if ( !this.bExtendable ) {
+        return anCells.val();
+    }
+    
+    // Extendable cell? Then we have to get the value of each of the cells
+    var aoResults = [];
+    anCells.each( function( iIndex, nCell ) {
+        aoResults.push( jQuery( nCell ).val() );
+    } );
+    return aoResults;
+}
+
+/*
+* Function: _fnRegisterClicks
+* Purpose:  Register the click event handlers for a cell. The individual calls 
+*           for clicking on a the cell itself should be overwritten in other 
+*           column types, the plus and minus button interaction however should 
+*           be reusable in most of the cases.
+* Input(s): void
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterClicks = function() {
+    if ( this.bProtected ) return;
+
+    var sTable = '#' + this.oSpreadSheet.fnGetId();
+    var sTd = [ 'td', this.sType, SpreadSheet.CSS.Clickable ].join( '.' );
+    
+    // Click on a cell
+    this._fnRegisterClick( sTable, sTd );    
+    // Blurring a cell
+    this._fnRegisterBlur( sTable, sTd );
+    // Click on plus
+    this._fnRegisterAdd( sTable, sTd );
+    // Click on minus
+    this._fnRegisterMinus( sTable, sTd );
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will make the clicked input field writeable and select the 
+*           content.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+
+    jQuery( sTable ).delegate( sInput, 'click', function( event ) {    
+        var nInput = jQuery( this );
+        
+        nInput.removeAttr( 'readonly' );
+        nInput.removeClass( SpreadSheet.CSS.Readonly );
+        nInput.select();
+    } );
+}
+
+/*
+* Function: _fnRegisterBlur
+* Purpose:  Registers a cell blur callback. In this case, make all blurred input
+*           field readonly again and save the content in the DataTables instance
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterBlur = function( sTable, sTd ) {
+    var self = this;
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+    
+    jQuery( sTable ).delegate( sInput, 'blur', function( event ) {    
+        var nInput = jQuery( this );
+        var nCell = nInput.parents( sTd );
+        var aoValues = self.fnValue( nCell );
+        
+        nInput.attr( 'readonly', 'readonly' );
+        nInput.addClass( SpreadSheet.CSS.Readonly );
+        self.oSpreadSheet.fnUpdate( nCell, self.fnCreate( aoValues ) );
+    } );
+}
+
+/*
+* Function: _fnRegisterAdd
+* Purpose:  Register the callback what will happen if one clicks on the neat add
+*           button in a cell. Usually a new default line should appear and the 
+*           whole thing shall be saved in the DataTables instance. In almost all 
+*           cases this callback is nothing that you would like to overwrite in 
+*           your column prototype.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterAdd = function( sTable, sTd ) {
+    var self = this;
+    var sAdd = [ 'span', this.sType, SpreadSheet.CSS.Plus ].join( '.' );
+    
+    jQuery( sTable ).delegate( sAdd, 'click', function( event ) {
+        var nCell = jQuery( this ).parents( sTd );
+        self._fnInsertNewLine( nCell );
+    } );
+}
+
+/*
+* Function: _fnRegisterMinus
+* Purpose:  Register the callback what will happen if one clicks on the neat 
+*           minus button in a cell. In this case the last line will be removed 
+*           and the new cell shall be saved in the DataTables instance. In 
+*           almost all cases this event handler is nothing that you would like 
+*           to overwrite in your column prototype.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnRegisterMinus = function( sTable, sTd ) {
+    var self = this;
+    var sMinus = [ 'span', this.sType, SpreadSheet.CSS.Minus ].join( '.' );
+    
+    jQuery( sTable ).delegate( sMinus, 'click', function( event ) {
+        var nCell = jQuery( this ).parents( sTd );
+        self._fnDeleteLine( nCell );
+    } );
+}
+
+/*
+* Function: _fnInsertNewLine
+* Purpose:  Inserts a new default line at the end of the given cell and saves it
+*           in the DataTable instance.
+* Input(s): node:nCell - the DOM element or jQuery of the cell to be modified
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnInsertNewLine = function( nCell ) {
+    var aoValues = this.fnValue( nCell );
+    
+    // Insert a new default value
+    aoValues.push( this.sValue );
+    this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
+}
+
+/*
+* Function: _fnRegisterMinus
+* Purpose:  Removes a cell at the end of the given input cell and saves the 
+*           result in the respective DataTable instance. This is only done as 
+*           long as there are at least two cells in the table.
+* Input(s): node:nCell - the cell to be modified
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype._fnDeleteLine = function( nCell ) {
+    var aoValues = this.fnValue( nCell );
+    
+    // Can we remove an element - i.e. at least two in there?
+    if ( aoValues.length > 1 ) {
+        aoValues = aoValues.slice( 0, aoValues.length - 1 );
+        this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
+    }
+}
+
+/*
+* Function: _fnKeyin
+* Purpose:  Function to be executed when a cell gets a 'keyin' event. This event
+*           is a custom invention to support cell focusing when a user interacts
+*           with the sheet using the keyboard.
+* Input(s): node:nCell - the cell getting the keyin event
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype.fnKeyin = function( nCell ) {
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+    var nInput = jQuery( nCell ).find( sInput ).last();
+    
+    nInput.click();
+}
+
+/*
+* Function: _fnKeyout
+* Purpose:  Function to be executed when a cell gets a 'keyout' event. It is a
+*           custom invention to support cell defocusing when a user interacts
+*           with the sheet using the keyboard and is about to leave a cell.
+* Input(s): node:nCell - the cell getting the keyout event
+* Returns:  void
+*
+*/
+SpreadSheet.Column.prototype.fnKeyout = function( nCell ) {
+    var sInput = [ 'input', this.sType, SpreadSheet.CSS.Text ].join( '.' );
+    var nInput = jQuery( nCell ).find( sInput );
+    
+    nInput.blur();
+}
+
+SpreadSheet.Column.prototype.fnIsDefault = function( sValue ) {
+    if ( !this.bExtendable ) return sValue === this.sValue;
+    
+    for ( var i = 0, iLen = sValue.length; i < iLen; i++ ) {
+        if ( sValue[ i ] !== this.sValue ) return false;
+    }
+    return true;
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.IncrementColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetIncrementColumn instance when called with new
+*
+*/
+SpreadSheet.IncrementColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // objects
+    this.oSpreadSheet = oInit.oSpreadSheet;
+    
+    // string
+    this.sWidth = oInit.width || '50px';
+    
+    // integer
+    var value = oInit.value;
+    var inc = oInit.increment;
+    
+    this.iValue = typeof value !== 'undefined' ? parseInt( value ) : 1;
+    this.iIncrement = typeof inc !== 'undefined' ? parseInt( inc ) : 1;
+    
+    // booleans
+    this.bExtendable = false;
+    this.bProtected = true;
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.IncrementColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.IncrementColumn.prototype.constructor = SpreadSheet.IncrementColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a simple div 
+*           containing the number.
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.IncrementColumn.prototype._fnCreateCell = function( iValue ) {
+    var nCell = jQuery( '<div>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Increment,
+                      this.sType ];
+                      
+    if ( typeof iValue === 'undefined' ) {
+        iValue = this.iValue;
+    } else {
+        iValue = this.iValue + iValue * this.iIncrement;
+    }
+    nCell.text( iValue );
+    nCell.addClass( asClasses.join( ' ' ) );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.IncrementColumn.prototype.fnValue = function( oData ) {
+    var anCells = jQuery( 'div.' + SpreadSheet.CSS.Increment, jQuery( oData ) );
+    
+    return parseInt( anCells.text() );
+}
+
+// These callbacks are not required for increment columns. We will make sure 
+// that no strange things happen and put empty stubs here.
+SpreadSheet.IncrementColumn.prototype._fnRegisterClick = function( sTable, sTd ) {}
+SpreadSheet.IncrementColumn.prototype._fnRegisterBlur = function( sTable, sTd ) {}
+SpreadSheet.IncrementColumn.prototype.fnKeyin = function( nCell ) {}
+SpreadSheet.IncrementColumn.prototype.fnKeyout = function( nCell ) {}
+SpreadSheet.IncrementColumn.prototype.fnIsDefault = function( sValue ) {
+    return true;
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.EditColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetEditColumn instance when called with new; else undefined
+*
+*/
+SpreadSheet.EditColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // strings
+    this.sTitle = typeof oInit.title === 'string' ? oInit.title : ' ';
+    this.sValue = null;
+    this.sWidth = oInit.width || '50px';
+    
+    // booleans
+    this.bExtendable = false;
+    this.bProtected = true;
+    this.bSearchable = false;
+    this.bSortable = false;
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.EditColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.EditColumn.prototype.constructor = SpreadSheet.EditColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a simple div 
+*           containing three buttons up, down and delete
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.EditColumn.prototype._fnCreateCell = function( oValue ) {
+    var nCell = jQuery( '<div>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Edit,
+                      this.sType ];
+    nCell.addClass( asClasses.join( ' ' ) );
+    
+    var nUp = jQuery( '<span>' );
+    nUp.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Up );
+    var nDown = jQuery( '<span>' );
+    nDown.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Down );
+    var nDelete = jQuery( '<span>' );
+    nDelete.addClass( SpreadSheet.CSS.Icon + ' ' + SpreadSheet.CSS.Delete );
+    
+    nCell.append( nUp, nDown, nDelete );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.EditColumn.prototype.fnValue = function( oData ) {
+    return '';
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will make the clicked input field writeable and select the 
+*           content.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.EditColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sUp = [ 'span', SpreadSheet.CSS.Up ].join( '.' );
+    var sDown = [ 'span', SpreadSheet.CSS.Down ].join( '.' );
+    var sDelete = [ 'span', SpreadSheet.CSS.Delete ].join( '.' );
+
+    jQuery( sTable ).delegate( sUp, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget ).parents( sTd );
+        self.oSpreadSheet.fnExchangeRows( nCell[ 0 ], -1 );
+    } );
+    
+    jQuery( sTable ).delegate( sDown, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget).parents( sTd );
+        self.oSpreadSheet.fnExchangeRows( nCell[ 0 ], 1 );
+    } );
+
+    jQuery( sTable ).delegate( sDelete, 'click', function( event ) {
+        var nCell = jQuery( event.currentTarget ).parents( sTd );
+        self.oSpreadSheet.fnDeleteLine( nCell[ 0 ] );
+    } );
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.CheckboxColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetCheckboxColumn instance when called with new, 
+*           else undefined
+*
+*/
+SpreadSheet.CheckboxColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // strings
+    if ( typeof oInit.value === 'boolean' ) {
+        this.sValue = oInit.value;
+    } else if ( typeof oInit.value === 'string' ) {
+        this.sValue = oInit.value === 'true' ? true : false;
+    } else {
+        this.sValue = false;
+    }
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.CheckboxColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.CheckboxColumn.prototype.constructor = SpreadSheet.CheckboxColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a text input box
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.CheckboxColumn.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
+    var nCell = jQuery( '<span>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Icon,
+                      SpreadSheet.CSS.Checkbox, 
+                      this.sType ];
+                      
+    if ( sValue ) {
+        asClasses.push( SpreadSheet.CSS.Checked );
+    } else {
+        asClasses.push( SpreadSheet.CSS.Unchecked );
+    }                          
+    nCell.addClass( asClasses.join( ' ' ) );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.CheckboxColumn.prototype.fnValue = function( oData ) {
+    var anCells = jQuery( 'span.' + SpreadSheet.CSS.Checkbox, jQuery( oData ) );
+    
+    // Individual cell? A simple val will do - returns the first result
+    if ( !this.bExtendable ) {
+        return anCells.hasClass( SpreadSheet.CSS.Checked );
+    }
+    
+    // Extendable cell? Then we have to get the value of each of the cells
+    var aoResults = [];
+    anCells.each( function( iIndex, nCell ) {
+        aoResults.push( jQuery( nCell ).hasClass( SpreadSheet.CSS.Checked ) );
+    } );
+    return aoResults;
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will toggle the symbol of the checkbox on click and save 
+*           the new state directly in the DataTables instance.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.CheckboxColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sBox = [ 'span', this.sType, SpreadSheet.CSS.Checkbox ].join( '.' );
+
+    jQuery( sTable ).delegate( sBox, 'click', function( event ) {    
+        var nCheckbox = jQuery( this );
+        var nCell = nCheckbox.parents( sTd );
+        
+        nCheckbox.toggleClass( SpreadSheet.CSS.Checked );
+        nCheckbox.toggleClass( SpreadSheet.CSS.Unchecked );
+        
+        var aoValues = self.fnValue( nCell );
+        self.oSpreadSheet.fnUpdate( nCell, self.fnCreate( aoValues ) );
+    } );
+}
+
+/*
+* Function: _fnRegisterBlur
+* Purpose:  Registers a cell blur callback. In this case, we have to do nothing 
+*           because checkboxes save their state already when being clicked.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.CheckboxColumn.prototype._fnRegisterBlur = function( sTable, sTd ) {
+    // Nothing to see here, please proceed
+}
+
+/*
+* Function: _fnKeyin
+* Purpose:  Function to be executed when a cell gets a 'keyin' event. Here: 
+*           nothing to do
+* Input(s): node:nCell - the cell getting the keyin event
+* Returns:  void
+*
+*/
+SpreadSheet.CheckboxColumn.prototype.fnKeyin = function( nCell ) {
+    // Nothing to do
+}
+
+/*
+* Function: _fnKeyout
+* Purpose:  Function to be executed when a cell gets a 'keyout' event. Here: 
+*           nothing to do
+* Input(s): node:nCell - the cell getting the keyout event
+* Returns:  void
+*/
+SpreadSheet.CheckboxColumn.prototype.fnKeyout = function( nCell ) {
+    // Nothing to do
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.SelectColumn
+* Purpose:  ConstructorSpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Select,
+                      this.sType ]
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetCheckboxColumn instance when called with new, 
+*           else undefined
+*
+*/
+SpreadSheet.SelectColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // strings
+    this.sValue = typeof oInit.value !== 'undefined' ? oInit.value : '';
+    
+    // objects
+    this.aOptions = typeof oInit.options !== 'undefined' ? oInit.options : [];
+    if ( jQuery.inArray( this.sValue, this.aOptions ) < 0 ) {
+        this.aOptions.unshift( this.sValue );
+    }
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.SelectColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.SelectColumn.prototype.constructor = SpreadSheet.SelectColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a text input box
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.SelectColumn.prototype._fnCreateCell = function( sValue ) {
+    if ( typeof sValue === 'undefined' ) sValue = this.sValue;
+
+    var nCell = jQuery( '<div>' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Select,
+                      this.sType ];
+                      
+    if ( typeof sValue === 'undefined' ) {
+        sValue = this.sValue;
+    }                      
+    nCell.authorlist_select( {
+        'value'         : sValue,
+        'options'       : this.aOptions
+    } );
+    nCell.addClass( asClasses.join( ' ' ) );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.SelectColumn.prototype.fnValue = function( oData ) {
+    var anCells = jQuery( 'select', jQuery( oData ) );
+    
+    // Individual cell? A simple val will do - returns the first result
+    if ( !this.bExtendable ) {
+        return anCells.val();
+    }
+    
+    // Extendable cell? Then we have to get the value of each of the cells
+    var aoResults = [];
+    anCells.each( function( iIndex, nCell ) {
+        aoResults.push( jQuery( nCell ).val() );
+    } );
+    return aoResults;
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will save the updated select box in the DataTable instance 
+*           as soon as we get the change event of any of the contained select 
+*           boxes.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.SelectColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    var self = this;
+    var sDiv = [ 'div', SpreadSheet.CSS.SpreadSheet, 
+                  SpreadSheet.CSS.Select, this.sType ].join( '.' );
+    var sSelector = [ sTd, sDiv, 'select' ].join( ' ' );
+
+    jQuery( sTable ).delegate( sSelector, 'change', function( event ) {
+        var nSelect = jQuery( event.currentTarget );
+        var nCell = nSelect.parents( sTd );
+        var aoValues = self.fnValue( nCell );
+        
+        self.oSpreadSheet.fnUpdate( nCell, self.fnCreate( aoValues ) );
+    } );
+}
+
+/*
+* Function: _fnRegisterBlur
+* Purpose:  Registers a cell blur callback. In this case, we have to nothing do.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.SelectColumn.prototype._fnRegisterBlur = function( sTable, sTd ) {
+    // Nothing to see here, please proceed
+}
+
+/*
+* Function: _fnKeyin
+* Purpose:  Function to be executed when a cell gets a 'keyin' event. Here: 
+*           nothing to do
+* Input(s): node:nCell - the cell getting the keyin event
+* Returns:  void
+*
+*/
+SpreadSheet.SelectColumn.prototype.fnKeyin = function( nCell ) {
+    // Nothing to do
+}
+
+/*
+* Function: _fnKeyout
+* Purpose:  Function to be executed when a cell gets a 'keyout' event. Here: 
+*           nothing to do
+* Input(s): node:nCell - the cell getting the keyout event
+* Returns:  void
+*
+*/
+SpreadSheet.SelectColumn.prototype.fnKeyout = function( nCell ) {
+    // Nothing to do
+}
+
+
+
+
+
+
+
+
+
+/*
+* Function: SpreadSheet.TextSelectColumn
+* Purpose:  Constructor
+* Input(s): object:oInit - Initialization settings for a column
+* Returns:  SpreadSheetTextSelectColumn instance when called with new
+*
+*/
+SpreadSheet.TextSelectColumn = function( oInit ) {
+    SpreadSheet.Column.call(this, oInit);
+    
+    // strings
+    this.sText = oInit.text || '-';
+    this.sValue = typeof oInit.value !== 'undefined' ? oInit.value : '';
+    this.aOptions = typeof oInit.options !== 'undefined' ? oInit.options : [];
+    if ( jQuery.inArray( this.sValue, this.aOptions ) < 0 ) {
+        this.aOptions.unshift( this.sValue );
+    }
+}
+// Inherit from SpreadSheet.Column
+SpreadSheet.TextSelectColumn.prototype = new SpreadSheet.Column();
+SpreadSheet.TextSelectColumn.prototype.constructor = SpreadSheet.TextSelectColumn;
+
+/*
+* Function: _fnCreateCell
+* Purpose:  Creates the actual content of the cell in this case a text input box
+*           preceded by a select box in the same line.
+* Input(s): void
+* Returns:  node:nCell - the cell content as a jQuery node
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnCreateCell = function( aValue ) {
+    if ( typeof aValue === 'undefined' ) aValue = [ this.sText, this.sValue ];
+
+    var nCell = jQuery( '<table>' ).addClass( SpreadSheet.CSS.TextSelect );
+    var nRow = jQuery( '<tr>' );
+    var nTextCell = jQuery( '<td>' ).addClass( SpreadSheet.CSS.TextSelectText );
+    var nSelectCell = jQuery( '<td>' ).addClass( SpreadSheet.CSS.TextSelectSelect );    
+
+    var nInput = jQuery( '<input type="text" value="' + aValue[ 0 ] + '">' );
+    var asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                      SpreadSheet.CSS.Text, 
+                      SpreadSheet.CSS.Readonly,
+                      this.sType ];            
+    nInput.attr( {
+        'class'     : asClasses.join( ' ' ),
+        'readonly'  : 'readonly'
+    } );
+    
+    var nSelect = jQuery( '<div>' );
+    asClasses = [ SpreadSheet.CSS.SpreadSheet, 
+                  SpreadSheet.CSS.Select,
+                  this.sType ];
+    nSelect.authorlist_select( {
+        'value'         : aValue[ 1 ],
+        'options'       : this.aOptions
+    } );
+    nSelect.addClass( asClasses.join( ' ' ) );
+    
+    nCell.append( nRow );
+    nRow.append( nTextCell, nSelectCell );
+    nTextCell.append( nInput );
+    nSelectCell.append( nSelect );
+    
+    return nCell;
+}
+
+/*
+* Function: fnValue
+* Purpose:  Returns the value of a cell of this column in a processable way - 
+*           meaning it returns a simple string or in case of an extendable cell 
+*           an array with each value.
+* Input(s): object:oData - the data of a cell of this column as a string, DOM
+*                          element or jQuery set.
+* Returns:  string|array string:oValue - the value of the cell
+*
+*/
+SpreadSheet.TextSelectColumn.prototype.fnValue = function( oData ) {
+    var anInput = jQuery( 'input.' + SpreadSheet.CSS.Text, jQuery( oData ) );
+    var anSelect = jQuery( 'select', jQuery( oData ) );
+    
+    // Individual cell? A simple val will do - returns the first result
+    if ( !this.bExtendable ) {
+        return [ anInput.val(), anSelect.val() ];
+    }
+    
+    // Extendable cell? Then we have to get the value of each of the cells
+    var iLength = Math.min( anInput.length, anSelect.length )
+    var aoResults = [];
+    for ( var i = 0, iLen = iLength; i < iLen; i++ ) {
+        aoResults.push( [ jQuery( anInput[ i ] ).val(), 
+                          jQuery( anSelect[ i ] ).val() ] );
+    }
+    
+    return aoResults;
+}
+
+/*
+* Function: _fnRegisterClick
+* Purpose:  Register the click interaction with a normal column cell. In this 
+*           case, we will save the updated select box in the DataTable instance 
+*           as soon as we get the change event of any of the contained select 
+*           boxes.
+* Input(s): string:sTable - the own table selector string
+*           string:sTd - the own table cell (td) selector string
+* Returns:  void
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnRegisterClick = function( sTable, sTd ) {
+    SpreadSheet.Column.prototype._fnRegisterClick.call( this, sTable, sTd );
+    SpreadSheet.SelectColumn.prototype._fnRegisterClick.call( this, sTable, sTd );
+}
+
+/*
+* Function: _fnInsertNewLine
+* Purpose:  Inserts a new default line at the end of the given cell and saves it
+*           in the DataTable instance.
+* Input(s): node:nCell - the DOM element or jQuery of the cell to be modified
+* Returns:  void
+*
+*/
+SpreadSheet.TextSelectColumn.prototype._fnInsertNewLine = function( nCell ) {
+    var aoValues = this.fnValue( nCell );
+    
+    // Insert a new default value
+    aoValues.push( [ this.sText, this.sValue ] );
+    this.oSpreadSheet.fnUpdate( nCell, this.fnCreate( aoValues ) );
+}
+
+SpreadSheet.TextSelectColumn.prototype.fnIsDefault = function( asValue ) {
+    if ( !this.bExtendable ) return this._fnLineIsDefault( asValue );
+    
+    for ( var i = 0, iLen = asValue.length; i < iLen; i++ ) {
+        if ( !this._fnLineIsDefault( asValue[ i ] ) ) return false;
+    }
+    return true;
+}
+
+SpreadSheet.TextSelectColumn.prototype._fnLineIsDefault = function( asValue ) {
+    var asCompare = [ this.sText, this.sValue ];
+    
+    for ( var i = 0, iLen = asCompare.length; i < iLen; i++ ) {
+        if ( asCompare[ i ] !== asValue[ i ] ) return false;
+    }    
+    return true; 
+}
+
+
+
+
+
+
+
+
+
+/*
+* Variable: SpreadSheet.ColumnTypes
+* Purpose:  Lookup table to determine the handling prototype for a certain 
+*           column type.
+*
+*/
+SpreadSheet.ColumnTypes = {
+    'text'                  : SpreadSheet.Column,
+    'increment'             : SpreadSheet.IncrementColumn,
+    'edit'                  : SpreadSheet.EditColumn,
+    'checkbox'              : SpreadSheet.CheckboxColumn,
+    'select'                : SpreadSheet.SelectColumn,
+    'textselect'            : SpreadSheet.TextSelectColumn,
+    
+    'default'               : SpreadSheet.Column
+}
+
+
+
+
+
+
+
+
 
 /*
 * Function: SpreadSheet
 * Purpose:  Constructor
-* Input(s): string:sDivId - Id of the html element where the SpreadSheet will be embedded in (preferably a div)
+* Input(s): string:sId - Id of the html element the SpreadSheet will be embedded
+*                        into (preferably a div).
 *           object:oInit - Object containing initialization settings
-* Returns:  void
+* Returns:  SpreadSheet instance when called with new, else undefined
 *
 */
-function SpreadSheet( sDivId, oInit ) {
-    // Sanitized initial parameter
-    this._nDiv = this._fnSanitizeDiv( sDivId );
-    this._oInit = this._fnSanitizeOptions( oInit );
-    this._oInit.Columns = this._fnSanitizeColumns( this._oInit.Columns );
-    this._asColumnNames = this._fnGetColumnNames( this._oInit );
-    this._aiReadonlyColumns = this._fnGetReadonlyColumns( this._oInit );
-    
-    // Counters for easier access in methods
-    this._iLine = -1;
-    
-    // Key and click managament for readonly columns
-    this._bWasRightButton = false;
-    this._bWasLeftButton = false;
+function SpreadSheet( sId, oInit ) {
+    // Clean the initialization parameters
+    this._oInit = this._fnSanitizeParameters( oInit );
 
-    // DOM nodes for fast access
-    this._nTable = this._fnCreateTable( this._nDiv );
-    this._nTableHead = this._fnCreateTableHead( this._nTable, this._asColumnNames );
-    this._nTableBody = this._fnCreateTableBody( this._nTable, this._asColumnNames );
+    // Find the parent element and assign SpreadSheet elements
+    this._nParent = this._fnGetElement( sId );
+    this._nParent.addClass( SpreadSheet.CSS.SpreadSheet );
+
+    // Create the table    
+    this._nTable = this._fnCreateTable();
+    this._nParent.append( this._nTable );
     
-    // DataTables management
-    this._fnRegisterDataTableType();
-    this._fnRegisterDataTableSorting();
-    this._fnRegisterDataTableFiltering();
-    this._oDataTable = this._fnCreateDataTable( this._nTable, this._oInit );
+    // Construct the column descriptors
+    this._aoColumns = this._fnCreateColumns( this._oInit, this._nTable );
+    
+    // Register table interaction callbacks
+    this._fnRegisterClicks( this._nTable );
+    this._fnRegisterKeyboard( this._nTable );
+    
+    // Create the DataTable instance
+    this._oDataTable = this._fnCreateDataTable( this._nTable, this._aoColumns );
+    
+    // Create an initial empty new line
     this.fnInsertNewLine();
-    this._fnRegisterEvents( this._oDataTable );
-    
-    // KeyTable managemenet
-    this._oInit.Focus = this._fnSanitizeFocus( this._oInit.Focus );
-    if ( this._oInit.Focus !== null ) {
-        this._iOldX = this._fnVisibleToHiddenIndex( this._oInit.Focus[0] );
-        this._iOldY = this._oInit.Focus[1];
-    }
-    this._oKeyTable = this._fnCreateKeyTable( this._nTable, this._oDataTable, this._oInit );
 }
 
 /*
-* Function: _fnSanitizeDiv
-* Purpose:  Turns a div id into a respective node
-* Input(s): string:sDivId - Id of the html element where the SpreadSheet will be embedded in (preferably a div)
-* Returns:  node:Div - The node 
+* Function: _fnSanitizeParameters
+* Purpose:  Ensures that the necessary options in the initializer object are set
+            and that they are of the right type.
+* Input(s): object:oInit - the initializer object to be sanitized.
+* Returns:  object:oSanitized - the sanitized version of the passed one.
 *
 */
-SpreadSheet.prototype._fnSanitizeDiv = function( sDivId ) {
-    // Check type of id string
-    if ( typeof sDivId !== 'string' ) {
-        throw 'First argument passed to the constructor has to be a string indicating element id to append to';
-    }
+SpreadSheet.prototype._fnSanitizeParameters = function( oInit ) {
+    var oSanitized = jQuery.extend( {}, oInit );
     
-    // Get div and return it
-    var nDiv = jQuery( '#' + sDivId );
-    if ( nDiv.length === 0 ) {
-        throw 'Element with given id ' + sDivId + ' not present. Could not create table';
-    }
-    nDiv.addClass( SpreadSheet._oCss.SpreadSheet );
+    oSanitized.columns = oInit.columns || [];
+    oSanitized.focus = oInit.focus || null;
     
-    return nDiv;
+    return oSanitized;
 }
 
 /*
-* Function: _fnSanitizeOptions
-* Purpose:  Sets missing values to defaults
-* Input(s): object:oInit - Object containing initialization settings
-* Returns:  object:oSanitizedInit - extended initializer object
+* Function: _fnGetElement
+* Purpose:  Get element by id or raises error. Handy for initialization calls to 
+            ensure presence of important nodes.
+* Input(s): object:oId - Id of the element to get. Should be of type string but 
+*                        could be of any type - toString() will be automatically
+*                        called in doubt.
+* Returns:  node:nElement - The element with the given id.
 *
 */
-SpreadSheet.prototype._fnSanitizeOptions = function( oInit ) {
-    // Check for correct type of initializer object
-    if ( typeof oInit !== 'object' || jQuery.isArray( oInit ) ) {
-        throw 'Type of initializing object has to be of type object';
+SpreadSheet.prototype._fnGetElement = function( oId ) {
+    var nElement = jQuery( '#' + oId );
+    if ( nElement.length === 0 ) {
+        throw 'Element with Id ' + oId + ' not present.';
     }
     
-    return jQuery.extend( {}, SpreadSheet._oDefaults, oInit );
-}
-
-/*
-* Function: _fnSanitizeColumns
-* Purpose:  Ensures correct types and values of the columns' initilization parameters
-* Input(s): object:oInit - Object containing initialization settings
-* Returns:  object:oSanitizedInit - Sanitized and default extended initializer object
-*
-*/
-SpreadSheet.prototype._fnSanitizeColumns = function( aoColumns ) {
-    var sanitized = [];
-    
-    // Check if type of column definitions is array
-    if ( !jQuery.isArray( aoColumns ) ) {
-        throw 'Columns option has to be of type array';
-    }
-    
-    // Fill up each given column with defaults and push it into the sanitized version
-    for ( var i = 0, iLen = aoColumns.length; i < iLen; i++ ) {
-        var column = jQuery.extend( {}, SpreadSheet._oDefaultColumn, aoColumns[i] );
-        
-        // Type checks of individual values
-        if ( typeof column.name !== 'string' ) {
-            console.log( 'WARNING: Column name has to be given as a string, skipping index ' + i );
-            continue;
-        }
-        if ( typeof column.visible !== 'boolean' ) {
-            console.log( 'WARNING: Column visibility has to be given as a boolean, skipping column ' + column.name );
-            continue;
-        }
-        if ( typeof column.readonly !== 'boolean' ) {
-            console.log( 'WARNING: Column read-only value has to be given as a boolean, skipping column ' + column.name );
-            continue;
-        }
-        if ( typeof column.type !== 'string' ) {
-            console.log( 'WARNING: Column type has to be given as a string, skipping column ' + column.name );
-            continue;
-        }
-        
-        // Type checks for value and options property depending on given type
-        switch ( column.type ) {
-            case SpreadSheet._oTypes.edit:
-                break;
-        
-            case SpreadSheet._oTypes.increment:
-                if ( !this._fnIsInteger( column.value ) && !this._fnIsInteger( column.options ) ) {
-                    console.log( 'WARNING: Column value and options have to be present and need to be \
-                                  given as type integer for incremental type, skipping ' + column.name );
-                    continue;
-                }
-                break;
-                
-            case SpreadSheet._oTypes.text:
-                if ( typeof column.value !== 'string' ) {
-                    console.log( 'WARNING: Column value has to be of type string for text (default) type, skipping ' + column.name );
-                    continue;
-                }
-                break;
-                
-            case SpreadSheet._oTypes.select:
-                if ( typeof column.value !== 'string' && !jQuery.isArray( column.options ) ) {
-                    console.log( 'WARNING: Column value has to be of type string and \
-                                  options of type array for select type, skipping ' + column.name );
-                    continue;
-                }
-                
-                // Make sure default value is in array of all options
-                if ( jQuery.inArray( column.value, column.options ) < 0 ) {
-                    column.options.unshift( column.value );
-                }
-                break;
-                
-            case SpreadSheet._oTypes.checkbox:
-                if ( typeof column.value !== 'boolean' ) {
-                    console.log( 'WARNING: Column value has to be of type boolean for checkbox type, skipping ' +cookie column.name );
-                    continue;
-                }
-                break;
-                
-            default:
-                console.log( 'WARNING: Unsupported type ' + column.type + ', skipping ' + column.name );
-                continue;
-        }
-        
-        // If we reach should reach this point, the column is quite okay, keep it! :)
-        sanitized.push( column );
-    }
-    
-    return sanitized;
-}
-
-/*
-* Function: _fnGetColumnNames
-* Purpose:  Filters the column names out of an initializer-like object
-* Input(s): object:oInit - Initializer-like objects
-* Returns:  string array:asColumnNames - The column names
-*
-*/
-SpreadSheet.prototype._fnGetColumnNames = function( oInit ) {
-    var columnNames = [];
-
-    for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++ ) { 
-        columnNames.push( oInit.Columns[i].name );
-    }
-    return columnNames;
-}
-
-/*
-* Function: _fnGetReadonlyColumns
-* Purpose:  Filters the column that are readonly out of an initializer-like object
-* Input(s): object:oInit - Initializer-like objects
-* Returns:  interger array:asColumnNames - the readonly column indices
-*
-*/
-SpreadSheet.prototype._fnGetReadonlyColumns = function( oInit ) {
-    var readonlyColumns = [];
-    
-    for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++) {
-        if ( oInit.Columns[i].readonly ) {
-            readonlyColumns.push( i );
-        }
-    }
-    
-    return readonlyColumns;
-}
-
-/*
-* Function: _fnIsInteger
-* Purpose:  JavaScript is lacking a function to check a value for being an integer.
-            So we are doing this by ensuring that the input is of type number and 
-            its rounded value equals to itself.
-* Input(s): object:iValue - object to be checked
-* Returns:  bool:isInteger - truth value if given object is an integer
-*
-*/
-SpreadSheet.prototype._fnIsInteger = function( oValue ) {
-    return typeof oValue === 'number' && oValue === Math.round( oValue );
+    return nElement;
 }
 
 /*
 * Function: _fnCreateTable
-* Purpose:  Creates the html elements of the table and adds them to the node specified in the passed parameter
-* Input(s): node:nDiv - the wrapper node to which the table will be appended to 
-* Returns:  node:table - the created table
+* Purpose:  Creates the DOM nodes - i.e. table, thead and tbody and their rows -
+*           in which the DataTable instance will be embedded into.
+* Input(s): void
+* Returns:  node:nTable - the root node of the created table
 *
 */
-SpreadSheet.prototype._fnCreateTable = function( nDiv ) {
-    // Create table, append it to the div and return the node
-    var css = [ SpreadSheet._oCss.DataTable, SpreadSheet._oCss.KeyTable, SpreadSheet._oCss.SpreadSheet ].join( ' ' );
-    var nTable = jQuery( '<table class="' + css + '" id="' + this._fnGenerateId() + '">' );
-    
-    nDiv.append( nTable );
+SpreadSheet.prototype._fnCreateTable = function() {
+    var aClasses = [ SpreadSheet.CSS.SpreadSheet, SpreadSheet.CSS.DataTable ];
+
+    var nTable = jQuery( '<table>' );
+    nTable.attr( {
+        'id'    : this._fnCreateId(),
+        'class' : aClasses.join( ' ' )
+    } );
+    var nTableHead = jQuery( '<thead><tr></thead>' );
+    var nTableBody = jQuery( '<tbody>' );
+    nTable.append( nTableHead, nTableBody );
     
     return nTable;
 }
 
 /*
-* Function: _fnGenerateId
-* Purpose:  Generates a unique ID for the table tag. JavaScript is lacking a native function 
-*           for that so we just use millis since epoch instead. This approach may theoretically(!) 
-*           lead to collision but not in practice as we only create a few SpreadSheets on one 
-*           page with sufficient timelag
+* Function: _fnCreateId
+* Purpose:  Generates a unique ID for something. JavaScript is lacking a native 
+*           function for this purpose. Instead, we will just use the millis 
+*           since the epoch. This approach may theoretically(!) lead to id 
+*           collisions. However, in most cases in practice we should have enough
+*           time between each generation.
 * Input(s): void
 * Returns:  integer:id - the generated id
 *
 */
-SpreadSheet.prototype._fnGenerateId = function() {
-    return jQuery.now();
+SpreadSheet.prototype._fnCreateId = function() {
+    return 'sheet-' + jQuery.now();
 }
 
 /*
-* Function: _fnCreateTableHead
-* Purpose:  Creates the html elements for the table head and adds them to the passed table node
-* Input(s): node:nTable - the table node for which the header is going to be created
-            string array:asColumnNames - the array containing the titles for the columns
-* Returns:  node:tableHead - the created tableHead
+* Function: _fnCreateColumns
+* Purpose:  Creates column descriptors from a initialization parameters-like 
+*           object as passed to the SpreadSheet constructor for instance.
+* Input(s): object:oInit - the initialization parameters passed to the table
+* Returns:  array object:aoColumns
 *
 */
-SpreadSheet.prototype._fnCreateTableHead = function( nTable, asColumnNames ) {
-    // Create a table header in the given table with the given columns names
-    var nTableHead = jQuery( '<thead>' );
-    var nTableHeadRow = jQuery( '<tr>' );
+SpreadSheet.prototype._fnCreateColumns = function( oInit, nTable ) {
+    var aoColumns = [];
+    var oColumn = null;
+    var oColumnType = null;
+    var oColumnPrototype = null;    
+    var sTableId = this.fnGetId( nTable );
     
-    for ( var i = 0, iLen = asColumnNames.length; i < iLen; i++ ) {
-        nTableHeadRow.append( '<th>' + asColumnNames[i] + '</th>' );
+    for ( var i = 0, iLen = oInit.columns.length; i < iLen; i++ ) {
+        // Get column,its type or default if not present and its prototype
+        oColumn = oInit.columns[i];
+        oColumn.sType = sTableId + '-' + i;
+        oColumn.oSpreadSheet = this;
+        
+        oColumnType = oColumn.type || 'default';
+        oColumnPrototype = SpreadSheet.ColumnTypes[ oColumnType ];
+        
+        aoColumns.push( new oColumnPrototype( oColumn ) );
     }
-    nTableHead.append( nTableHeadRow );
-    nTable.append( nTableHead );
     
-    return nTableHead;
+    return aoColumns;
 }
 
 /*
-* Function: _fnCreateTableBody
-* Purpose:  Creates a table body for the given table node
-* Input(s): node:nTable - the table node for which the header is going to be created
-* Returns:  node:tableBody - the embedded body node
-*
-*/
-SpreadSheet.prototype._fnCreateTableBody = function( nTable ) {
-    var nTableBody = jQuery( '<tbody>' );
-    
-    nTable.append( nTableBody );
-    return nTableBody;
-}
-
-/*
-* Function: _fnRegisterDataTableType
-* Purpose:  Registers the sType definition (see DataTable documentation online) for SpreadSheet with DataTable
-            as most prior one.
-* Input(s): void
+* Function: _fnRegisterClicks
+* Purpose:  Register click callbacks on all cells of this table. The callback 
+*           itself will just simply forward the click event directly to the 
+*           respective column object, after blurring any current focused cell,
+*           setting the focus to the clicked cell and looking up the cell in the
+*           DataTable.
+* Input(s): node:nTable - the jQuery set of the table root node
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnRegisterDataTableType = function() {
-    jQuery.fn.dataTableExt.aTypes.unshift( this._fnDataTableTypeDefinition );
-}
-
-/*
-* Function: _fnDataTableTypeDefinition
-* Purpose:  Defines the sType (see DataTable online documentation) of SpreadSheet. Every cell that contains html
-            that has the SpreadSheet CSS class is considered to be of our sType, everything else not.
-* Input(s): string:sData - raw string of the cell
-* Returns:  string:sType - the according sType
-*
-*/
-SpreadSheet.prototype._fnDataTableTypeDefinition = function( sData ) {
-    if ( jQuery( sData ).hasClass( SpreadSheet._oCss.SpreadSheet ) ) {
-        return SpreadSheet._oCss.SpreadSheet;
-    }
-    
-    return null;
-}
-
-/*
-* Function: _fnRegistersDataTableSorting
-* Purpose:  Registers the DataTable sorting functions (table header click) for ascending and descending ordering.
-* Input(s): void
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnRegisterDataTableSorting = function() {
-    jQuery.fn.dataTableExt.oSort[SpreadSheet._oCss.SpreadSheet + '-asc'] = this._fnMakeDataTableSortAscendingCallback();
-    jQuery.fn.dataTableExt.oSort[SpreadSheet._oCss.SpreadSheet + '-desc'] = this._fnMakeDataTableSortDescendingCallback();
-}
-
-/*
-* Function: _fnMakeDataTableSortAscendingCallback
-* Purpose:  Creates a callback that is registered with DataTables in order to allow dynamical ascending
-            ordering of the content. Forwards the two parameters unchanged to the canonical compare
-            function.
-* Input(s): string:a - the raw string content of the cell on the left-hand side of the comparison
-            string:b - the raw string content of the cell on the right-hand side of the comparison
-* Returns:  function:callback - the comparison callback for ascending ordering
-*
-*/
-SpreadSheet.prototype._fnMakeDataTableSortAscendingCallback = function() {
+SpreadSheet.prototype._fnRegisterClicks = function( nTable ) {
     var self = this;
+    // id selector of the passed table
+    var sId = '#' + this.fnGetId( nTable );
+    // all sub cells that are clickable
+    var sTd = ' td.' + SpreadSheet.CSS.Clickable;
 
-    return function( a, b ) {
-        return self._fnDataTableSortCompare( self, a, b );
-    }
-}
-
-/*
-* Function: _fnMakeDataTableSortDescendingCallback
-* Purpose:  Creates a callback that is registered with DataTables in order to allow dynamical ascending
-            ordering of the content. Forwards the two parameters to the canonical compare
-            function and inverts the order by multiplying with -1 to reverse the sort output.
-* Input(s): string:a - the raw string content of the cell on the left-hand side of the comparison
-            string:b - the raw string content of the cell on the right-hand side of the comparison
-* Returns:  function:callback - the comparison callback for descending ordering
-*
-*/
-SpreadSheet.prototype._fnMakeDataTableSortDescendingCallback = function() {
-    var self = this;
-    
-    return function( a, b ) {
-        return self._fnDataTableSortCompare( self, a, b ) * -1;
-    }
-}
-
-/*
-* Function: _fnDataTableSortCompare
-* Purpose:  Defines the sorting function for ascending ordering of the table. Distinguishes between the supported
-            input types of the SpreadSheet and selects and compares their values accordingly. Everything unknown is
-            considered to be equal to every other value.
-* Input(s): object:self - reference to the SpreadSheet instance
-            string:a - the raw string content of the cell on the left-hand side of the comparison
-            string:b - the raw string content of the cell on the right-hand side of the comparison
-* Returns:  integer:comparison - a standard javascript return value for sort functions (less than: negative, equal: zero, greater than: positive)
-*
-*/
-SpreadSheet.prototype._fnDataTableSortCompare = function( self, a, b ) {
-    var nA = jQuery( a );
-    var nB = jQuery( b );
-    
-    if ( nA.hasClass( SpreadSheet._oCss.Increment ) ) {
-        var left = parseInt( nA.val() );
-        var right = parseInt( nB.val() );
-    
-    } else if ( nA.is( 'input:text' ) ) {
-        var left = nA.val();
-        var right = nB.val();
+    // TODO: rethink me! Click in a cell on an input and then on another input 
+    // in the same cell. On the first click I blur and on the second click I 
+    // will go into edit mode. You want me to behave like this?
+    jQuery( sId ).delegate( sTd, 'focus', function( event ) {
+        var nTarget = jQuery( event.currentTarget );
+        var iX = nTarget.parent().children().index( nTarget );
         
-    } else if ( nA.is( 'input:checkbox' ) ) {
-        var left = self._fnChecked( nA );
-        var right = self._fnChecked( nB );
-        
-    } else if ( nX.is( 'select' ) ) {
-        var left = nA.children( 'option:selected' ).val();
-        var right = nB.children( 'option:selected' ).val();
-        
-    } else {
-        return 0;
-    }   
-    return ( left < right ) ? -1 : ( ( left > right ) ? 1 : 0 );
-}
-
-/*
-* Function: _fnRegisterDataTableFiltering
-* Purpose:  Registers the DataTable filtering function for the SpreadSheet sType (see DataTable online documentation)
-* Input(s): void
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnRegisterDataTableFiltering = function() {
-    jQuery.fn.dataTableExt.ofnSearch[SpreadSheet._oCss.SpreadSheet] = this._fnMakeDataTableFilteringCallback();
-}
-
-/*
-* Function: _fnMakeDataTableFilteringCallback
-* Purpose:  Defines a callback on how to extract a canonical (normalized) content of a cell from its wrapping 
-            HTML input tags. This is done only for every currently supported type of SpreadSheet. Everything 
-            is considered to be not normalizable - i.e. empty string.
-* Input(s): void
-* Returns:  function:callback - callback that returns the canonical (normalized) content of the cell - i.e. 
-*                               stripped from wrapping HTML code.
-*
-*/
-SpreadSheet.prototype._fnMakeDataTableFilteringCallback = function() {
-    var self = this;
-
-    return function( sData ) {
-        var nData = jQuery( sData );
-    
-        if ( nData.is( 'input:text' ) ) {
-            return nData.val();
-        
-        } else if ( nData.is( 'input:checkbox' ) ) {
-            return self._fnChecked( nData );
-        
-        } else if ( nData.is( 'select' ) ) {
-            return nData.children( 'option:selected' ).val();
+        if ( !self._aoColumns[ iX ].bProtected ) {
+            self._fnFocusin( nTarget );
         }
-        return '';
+    } );
+    
+    jQuery( sId ).delegate( sTd, 'focusout', function( event ) {
+        var nTarget = jQuery( event.currentTarget );
+        var iX = nTarget.parent().children().index( nTarget );
+        
+        if ( !self._aoColumns[ iX ].bProtected ) {
+            self._fnFocusout( nTarget );
+        }
+    } );
+}
+
+/*
+* Function: _fnRegisterKeyboard
+* Purpose:  Register keyboard callbacks on all cells of this table. The callback 
+*           itself will just simply forward the click event directly to the 
+*           respective column object, after blurring any current focused cell,
+*           setting the focus to the focused cell and looking up the cell in the
+*           DataTable.
+* Input(s): node:nTable - the jQuery set of the table root node
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnRegisterKeyboard = function( nTable ) {
+    var self = this;
+
+    jQuery( document ).keydown( function( event ) {
+        // find focused cells and look up whether they belong to our table
+        var nFocus = jQuery( 'td.' + SpreadSheet.CSS.Focus );
+        var nTable = nFocus.parents( '#' + self.fnGetId() );
+        if ( nTable.length <= 0 ) return;
+
+        // Escape
+        if ( event.which == jQuery.ui.keyCode.ESCAPE ) {
+            self._fnFocusout( nFocus );
+            self._fnEscape( nFocus );
+            event.preventDefault();
+        //Enter
+        } else if ( event.which == jQuery.ui.keyCode.ENTER ) {
+            self._fnFocusout( nFocus );
+            self._fnEnter( nFocus );
+            event.preventDefault();
+        // Shift + Tab
+        } else if ( event.shiftKey && event.which == jQuery.ui.keyCode.TAB ) {
+            self._fnFocusout( nFocus );
+            self._fnMoveLeft( nFocus );
+            event.preventDefault();
+        // Tab
+        } else if ( event.which == jQuery.ui.keyCode.TAB ) {
+            self._fnFocusout( nFocus );
+            self._fnMoveRight( nFocus );
+            event.preventDefault();
+        // Up arrow
+        } else if ( event.which == jQuery.ui.keyCode.UP ) {
+            self._fnFocusout( nFocus );
+            self._fnMoveUp( nFocus );
+            event.preventDefault();
+        // Down arrow
+        } else if ( event.which == jQuery.ui.keyCode.DOWN ) {
+            self._fnFocusout( nFocus );
+            self._fnMoveDown( nFocus );
+            event.preventDefault();
+        }
+    } );
+}
+
+/*
+* Function: _fnEnter
+* Purpose:  Defines what happens when a person hits the enter button - i.e. move
+*           down if another cell is there or introduce a new one first and then 
+*           move.
+* Input(s): node:nCell - the cell that was focused when the enter key was hit
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnEnter = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iEnd = oSettings._iDisplayEnd;
+    var iItems = iEnd - oSettings._iDisplayStart;
+    var iTotalItems = oSettings.aoData.length;
+    
+    var oColumn = this._aoColumns[ iX ];
+    
+    if ( iY == iItems - 1 && iEnd == iTotalItems ) {
+        this.fnInsertNewLine( false );
+        this._oDataTable.fnPageChange( 'last' );
+        
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.last().children().eq( iX );
+        
+        oColumn.fnKeyout( nCell );
+        this._fnFocusin( nNewCell );
+        oColumn.fnKeyin( nNewCell );
+    } else {
+        this._fnMoveDown( nCell );
     }
+}
+
+/*
+* Function: _fnEscape
+* Purpose:  Sends a 'Keyout' event to all passed cells
+* Input(s): node:nFocus - the nodes
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnEscape = function( nFocus ) {
+    var self = this;
+    
+    nFocus.each( function( iIndex, nCell ) {
+        var iColumn = self._oDataTable.fnGetPosition( nCell )[ 2 ];
+        self._aoColumns[ iColumn ].fnKeyout( nCell );
+    } );
+}
+
+/*
+* Function: _fnFocusout
+* Purpose:  Remove the focus from the one passed cell
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnFocusout = function( nTd ) {
+    var nCell = jQuery( nTd );
+    var nRow = nCell.parent();
+    var iIndex = nRow.children().index( nCell );
+    var sSelector = 'td.' + SpreadSheet.CSS.Clickable + ':eq(' + iIndex + ')';
+    var nColumn = nRow.parent().children().find( sSelector );
+    
+    nTd.removeClass( SpreadSheet.CSS.Focus );
+    nRow.removeClass( SpreadSheet.CSS.RowFocus );
+    nColumn.removeClass( SpreadSheet.CSS.ColumnFocus );
+}
+
+/*
+* Function: _fnFocusin
+* Purpose:  Add the focus to the passed cell
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnFocusin = function( nTd ) {
+    var nCell = jQuery( nTd );
+    var nRow = nCell.parent();
+    var iIndex = nRow.children().index( nCell );
+    var sSelector = 'td.' + SpreadSheet.CSS.Clickable + ':eq(' + iIndex + ')';
+    var nColumn = nRow.parent().children().find( sSelector );
+
+    nTd.addClass( SpreadSheet.CSS.Focus );
+    nRow.addClass( SpreadSheet.CSS.RowFocus );
+    nColumn.addClass( SpreadSheet.CSS.ColumnFocus );
+}
+
+/*
+* Function: _fnMoveLeft
+* Purpose:  This function gets a cell as an input and moves the focus from it to
+*           another cell to the left. While doing so it keeps track of out of 
+*           bounds checks, pagination, readonly columns and row skips for the 
+*           previously mentioned possible column skips.
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveLeft = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iStart = oSettings._iDisplayStart;
+    var iPerPage = oSettings._iDisplayLength;
+    
+    var iMovedX = iX;
+    var iMovedY = iY;
+    
+    // Calculate the next free cell
+    do {
+        iMovedX--;
+        if ( iMovedX < 0 ) {
+            iMovedX = this._aoColumns.length - 1;
+            iMovedY--;
+        }
+    } while ( this._aoColumns[ iMovedX ].bProtected );
+    
+    var oColumn = this._aoColumns[ iX ];
+    var oNewColumn = this._aoColumns[ iMovedX ];
+    var nNewCell = nCell;
+    
+    // We stay on the same page after the move
+    if ( iMovedY >= 0 ) {
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+        
+    // Top most cell
+    } else if ( iMovedY < 0 && iStart == 0 ) {
+        oColumn = this._aoColumns[ iX ];
+        nNewCell = anRows.eq( iY ).children().eq( iX );
+        
+    // We have to flip the page first
+    } else if ( iMovedY < 0 && iStart > 0 ) {
+        this._oDataTable.fnPageChange( 'previous' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iMovedX );
+    }
+    oColumn.fnKeyout( nCell );
+    this._fnFocusin( nNewCell );
+    oNewColumn.fnKeyin( nNewCell );
+}
+
+/*
+* Function: _fnMoveRight
+* Purpose:  This function gets a cell as an input and moves the focus from it to
+*           another cell to the right. While doing so it keeps track of out of 
+*           bounds checks, pagination, readonly columns and row skips for the 
+*           previously mentioned possible column skips. If the user tabs right 
+*           on the very last cells the script will introduce a new line at the 
+*           very end and will focus on it.
+* Input(s): node:nTd - the cell
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveRight = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iItems = oSettings._iDisplayEnd - oSettings._iDisplayStart;
+    var iPerPage = oSettings._iDisplayLength;
+    var iTotalItems = oSettings.aoData.length;
+    
+    var iMovedX = iX;
+    var iMovedY = iY;
+    
+    do {
+        iMovedX++;
+        if ( iMovedX >= this._aoColumns.length ) {
+            iMovedX = 0;
+            iMovedY++;
+        }
+    } while ( this._aoColumns[ iMovedX ].bProtected );
+    
+    var oColumn = this._aoColumns[ iX ];
+    var oNewColumn = this._aoColumns[ iMovedX ];
+    var nNewCell = nCell;
+    
+    // just go down if we can
+    if ( iMovedY < iItems ) {
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    
+    // very last cell, introduce new line on the same page
+    } else if ( iMovedY >= iItems &&  iItems < iPerPage ) {
+        this.fnInsertNewLine();
+        this._oDataTable.fnPageChange( 'last' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    
+    // very last cell, introduce new line on the next page
+    } else if ( iMovedY >= iItems && iTotalItems % iPerPage == 0 ) {
+        this.fnInsertNewLine();
+        this._oDataTable.fnPageChange( 'last' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
+        
+    // flip the page
+    } else if ( iMovedY >= iItems && iTotalItems % iPerPage > 0 ) {
+        this._oDataTable.fnPageChange( 'next' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
+    }
+    
+    oColumn.fnKeyout( nCell );
+    this._fnFocusin( nNewCell );
+    oNewColumn.fnKeyin( nNewCell );
+}
+
+/*
+* Function: _fnMoveUp
+* Purpose:  Moves the focus cursor from the passed cell one up. While doing so 
+*           it takes into account pagination and out-of-bounds checks for the 
+*           top most cell
+* Input(s): node:nCell - the cell to move up from
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveUp = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iStart = oSettings._iDisplayStart;
+    var iPerPage = oSettings._iDisplayLength;
+    
+    var oColumn = this._aoColumns[ iX ];
+    var nNewCell = nCell;
+    
+    // Same page just one row up; if available
+    if ( iY > 0 ) {
+        nNewCell = anRows.eq( iY - 1 ).children().eq( iX );
+        
+    // First page; refocus top most cell
+    } else if ( iY == 0 && iStart == 0 ) {
+        nNewCell = anRows.eq( 0 ).children().eq( iX );
+    
+    // Previous page; down most cell   
+    } else if ( iY == 0 && iStart > 0 ) {
+        this._oDataTable.fnPageChange( 'previous' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iX );
+    }
+    
+    oColumn.fnKeyout( nCell );
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
+}
+
+/*
+* Function: _fnMoveDown
+* Purpose:  Moves the focus cursor from the passed cell one down. While doing so 
+*           it takes into account pagination and out-of-bounds checks for the 
+*           very last cell. This call DOES NOT introduce a new line when 
+*           reaching the end of the table but will rather refocus on it.
+* Input(s): node:nCell - the cell to move up from
+* Returns:  void
+*
+*/
+SpreadSheet.prototype._fnMoveDown = function( nCell ) {
+    var nRow = nCell.parent();
+    var anRows = nRow.parent().children();
+    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
+    var iY = anRows.index( nRow );
+    
+    var oSettings = this._oDataTable.fnSettings();
+    var iItems = oSettings._iDisplayEnd - oSettings._iDisplayStart;
+    var iTotalItems = oSettings.aoData.length;
+    var iPerPage = oSettings._iDisplayLength;
+    
+    var oColumn = this._aoColumns[ iX ];
+    var nNewCell = nCell;
+    
+    // Same page just one row down
+    if ( iY >= 0 && iY < iItems - 1 ) {
+        nNewCell = anRows.eq( iY + 1 ).children().eq( iX );
+    // End of page or Would have to flip page; but no row available
+    } else if ( iY >= 0 && iY == iItems - 1 && 
+              ( iItems < iPerPage || iTotalItems % iPerPage == 0 ) ) {
+        nNewCell = anRows.eq( iItems - 1 ).children().eq( iX );
+
+    // Have to flip page; and another row is available
+    } else if ( iY >= 0 && iY == iItems - 1 && iTotalItems % iPerPage > 0 ) {
+        this._oDataTable.fnPageChange( 'next' );
+        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
+        nNewCell = anRows.eq( 0 ).children().eq( iX );
+    }
+    
+    oColumn.fnKeyout( nCell );
+    this._fnFocusin( nNewCell );
+    oColumn.fnKeyin( nNewCell );
 }
 
 /*
 * Function: _fnCreateDataTable
-* Purpose:  Initializes the DataTables jQuery plugin and its extra ColVis
-* Input(s): node:nTable - the table node to transform into a DataTable
-            object:oInit - the initializer object for the SpreadSheet; used to extract hidden columns
-* Returns:  object:dataTable - he created DataTable object
+* Purpose:  Initializes the DataTables jQuery plugin and its extra plugin ColVis
+* Input(s): node:nTable - the table node in which the DataTable will be embedded
+* Returns:  object:oDataTable - the created DataTable object
 *
 */
-SpreadSheet.prototype._fnCreateDataTable = function( nTable, oInit ) {
-    // Find all Initial hidden columns
-    var hiddenColumns = []; 
-    for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++ ) {
-        if ( !oInit.Columns[i].visible ) {
-            hiddenColumns.push( i );
-        }
-    }
-    
-    var dataTable = nTable.dataTable( {
-        'sDom' : '<"H"lfr>Ct<"F"ip>',
-        'bJQueryUI' : true,
-        'sPaginationType' : 'full_numbers',
-        'bAutoWidth' : false,
-        'aoColumnDefs' : [
-            { 'bVisible' : false, 
-              'aTargets' : hiddenColumns
-            }
-        ],
-        
-        'aoColumns' : this._fnGetColumnDefinitions( oInit ),
-        'aaSorting' : this._fnGetInitialSorting( oInit ),
-        
-        // ColVis plug-in initialization parameters
-        'oColVis' : {
-            'activate' : 'mouseover',
-            'buttonText' : '&nbsp;',
-            'bRestore' : true,
-            'sAlign' : 'left'
-        },
-        'fnDrawCallback' : this._fnMakeDrawCallback()
-    });
-    return dataTable;
-}
 
-/*
-* Function: _fnGetColumnDefinitions
-* Purpose:  Sets special parameters for Edit and Increment columns such as fixed size of 50px
-* Input(s): object:oInit - the initializer object for the SpreadSheet; used to determine the widths
-* Returns:  object array:column width - array containing objects representing a DataTable width value
-*
-*/
-SpreadSheet.prototype._fnGetColumnDefinitions = function( oInit ) {
-    var columnWidths = [];
-    
-    for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++ ) {
-        var column = oInit.Columns[i];
+SpreadSheet.prototype._fnCreateDataTable = function( nTable, aoColumns ) {    
+    // Create the DataTables instance
+    var oDataTable = nTable.dataTable( {
+        'bAutoWidth'        : false,
+        'bJQueryUI'         : true,
         
-        if ( column.type === SpreadSheet._oTypes.edit || column.type === SpreadSheet._oTypes.increment ) {
-            var definition = { 'sWidth' : '50px' }
-            if ( column.type === SpreadSheet._oTypes.edit ) {
-                definition['bSearchable'] = false;
-                definition['bSortable'] = false;
-            }
+        'sDom'              : '<"H"lfr>Ct<"F"ip>',
+        'sPaginationType'   : 'full_numbers',
+        
+        'aoColumns'         : aoColumns,
+        'aaSorting'         : this._fnGetInitialSorting( aoColumns ),
+        
+        // ColVis extra
+        'oColVis'           : {
+            'activate'      : 'mouseover',
+            'buttonText'    : '&nbsp;',
             
-            columnWidths.push( definition );
-        } else {
-            columnWidths.push( null );
-        }
-    }
-    return columnWidths;
+            'bRestore'      : true,
+            
+            'sAlign'        : 'left'
+        },
+        
+        'fnDrawCallback'    : this._fnMakeDrawCallback()
+    });
+    
+    return oDataTable;
 }
 
 /*
 * Function: _fnGetInitialSorting
-* Purpose:  Sets the first Increment column to be as sorted for or the first column as default
-* Input(s): object:oInit - the initializer object for the SpreadSheet; used to determine the widths
-* Returns:  array array:sorting - array containing a DataTable sort information
+* Purpose:  Sets the initial sorting of a DataTables instance onto the first 
+*           incremental column or to the very first column, if an incremental 
+*           column is not present
+* Input(s): object:aoColumns - the columns on which to determine the sorting
+* Returns:  array array:asSorting - array representing a DataTable sorting
 *
 */
-SpreadSheet.prototype._fnGetInitialSorting = function( oInit ) {
-    for ( var i = 0, iLen = oInit.Columns.length; i < iLen; i++ ) {
-        if ( oInit.Columns[i].type === SpreadSheet._oTypes.increment ) {
+SpreadSheet.prototype._fnGetInitialSorting = function( aoColumns ) {
+    for ( var i = 0, iLen = aoColumns.length; i < iLen; i++ ) {
+        if ( aoColumns[i] instanceof SpreadSheet.IncrementColumn ) {
             return [[ i, 'asc' ]];
         }
     }
@@ -591,864 +1790,192 @@ SpreadSheet.prototype._fnGetInitialSorting = function( oInit ) {
 
 /*
 * Function: _fnMakeDrawCallback
-* Purpose:  Returns a callback function for the DataTables fnDrawCallback options. 
-*           It is responsible for positioning the ColVis show/hide column button 
-*           in the left upper corner of the table head - closures a reference to this
-*           in self.
+* Purpose:  Returns a callback function for the DataTables fnDrawCallback 
+*           option. It is responsible for the positioning of the ColVis button,
+*           that can show or hide columns. The position will always be the left 
+*           upper corner of the table head.
 * Input(s): void
-* Returns:  function:drawCallback - the mentioned callback
+* Returns:  function:fnDrawCallback - the draw callback
 *
 */
 SpreadSheet.prototype._fnMakeDrawCallback = function() {
     var self = this;
 
     return function( event ) {
-        // Look up the button in the DOM, than set its position to the upper-left corner of the table head
-        var nColVis = jQuery( 'div.ColVis', event.nTableWrapper )[0];
+        var nColVisButton = jQuery( 'div.ColVis', event.nTableWrapper );
+        var nTableHead = jQuery( 'thead', self._nTable );
         
-        nColVis.style.top = ( self._nTableHead.position().top ) + 'px';
-        nColVis.style.left = ( self._nTableHead.position().left ) + 'px';
-        nColVis.style.height = ( self._nTableHead.height() ) + 'px';
-        
-        if ( jQuery.browser.mozilla ) {
-            nColVis.style.top = ( self._nTableHead.position().top - 1 ) + 'px';
-        }
-    }
-}
-
-/*
-* Function: _fnRegisterEvents
-* Purpose:  Registers key press and click callbacks on the table. They keep track of 
-*           the pressed buttons for the SpreadSheet cursor navigation.
-* Input(s): object:oDataTable - the DataTable instance that gets the events assigned to
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnRegisterEvents = function( oDataTable ) {
-    // Click action on cell, use live here in order to add it also to added cells later
-    jQuery( 'tbody td', oDataTable.fnSettings().nTable ).live( 'click', this._fnMakeClickCallback() );
-    
-    // Click action on delete button
-    jQuery( 'span.' + SpreadSheet._oCss.jQueryDelete, oDataTable.fnSettings().nTable ).live( 'click', this._fnMakeDeleteCallback() );
-    jQuery( 'span.' + SpreadSheet._oCss.jQueryUp, oDataTable.fnSettings().nTable ).live( 'click', this._fnMakeUpCallback() );
-    jQuery( 'span.' + SpreadSheet._oCss.jQueryDown, oDataTable.fnSettings().nTable ).live( 'click', this._fnMakeDownCallback() );
-    
-    // Decide between Opera and Mozilla, respectively the others
-    var callback = this._fnMakeKeypressCallback();
-    if ( jQuery.browser.mozilla || jQuery.browser.opera ) {
-        jQuery(document).bind( 'keypress', callback );
-    } else {
-        jQuery(document).bind( 'keydown', callback );
-    }
-}
-
-/*
-* Function: _fnMakeClickCallback
-* Purpose:  Returns a callback function for the click event handler in _fnRegisterEvents - closures 
-*           reference to this as self into the function. It is responsible for deactivating every
-            flag of a button press when clicking.
-* Input(s): void
-* Returns:  function:clickCallback - the mentioned callback
-*
-*/
-SpreadSheet.prototype._fnMakeClickCallback = function() {
-    var self = this;
-    
-    // Set pressed keyboard buttons to false
-    return function( event ) {
-        self._bWasRightButton = false;
-        self._bWasLeftButton = false;
-    }
-}
-
-/*
-* Function: _fnMakeDeleteCallback
-* Purpose:  Returns a callback function for the click event handler in _fnRegisterEvents - closures 
-*           reference to this as self into the function. It is responsible to first save every
-            cell that is still in the edit mode and afterwards to delete the row and update every
-            incremental row.
-* Input(s): void
-* Returns:  function:deleteCallback - the mentioned callback
-*
-*/
-SpreadSheet.prototype._fnMakeDeleteCallback = function() {
-    var self = this;
-    
-    return function( event ) {
-        // Disable the edit status on all cells
-        self._fnBlur();
-    
-        // Find the position of the row we are deleting
-        var row = jQuery( event.currentTarget ).parents( 'tr' )[0];
-        var line = self._oDataTable.fnGetPosition( row );
-        
-        // Delete the row, update our internal counter and make sure that there is at least one line to edit
-        self._oDataTable.fnDeleteRow( line );
-        self._iLine--;
-        if ( self._iLine < 0 ) {
-            self.fnInsertNewLine();
-        }
-        
-        // Update the incremental columns
-        self._fnUpdateIncrementColumns( line );
-    }
-}
-
-/*
-* Function: _fnBlur
-* Purpose:  Blurs and saves all current editable data cells
-* Input(s): void
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnBlur = function() {
-    var nCells = jQuery( 'td > *:not(' + SpreadSheet._oCss.ReadOnly + ')', this._nTableBody ).parents( 'td' );
-    for ( var i = 0, iLen = nCells.length; i < iLen; i++ ) {
-        this._fnSave( nCells[i] );
-    }
-}
-
-/*
-* Function: _fnMapeUpCallback
-* Purpose:  Creates a row exchange callback with an offset of -1 (change the element with the one that has its index minus one)
-* Input(s): void
-* Returns:  function:exchangeCallback
-*
-*/
-SpreadSheet.prototype._fnMakeUpCallback = function() {
-    return this._fnMakeExchangeCallback( -1 );
-}
-
-/*
-* Function: _fnMakeExchangeCallback
-* Purpose:  Creates a callback that will change the row that got the event with the one that has the
-            index of the triggered row + offset. It also makes sure that all data is being saved before
-            invoking any changes.
-* Input(s): integer:offset - the row offset to the row to be changed with
-* Returns:  function:exchangeCallback
-*
-*/
-SpreadSheet.prototype._fnMakeExchangeCallback = function( offset ) {
-    var self = this;
-    
-    return function( event ) {
-        // Disable the edit status on all cells
-        self._fnBlur();
-        
-        // Find the position of the row we are exchanging
-        var row = jQuery( event.currentTarget ).parents( 'tr' )[0];
-        var line = self._oDataTable.fnGetPosition( row );
-        
-        // ... and change!
-        self._fnExchangeRows( line, line + offset );
-    }
-}
-
-
-/*
-* Function: _fnExchangeRow
-* Purpose:  This function changes two rows with each other and updates the indices of all involved rows.
-            The function automatically fixes one of the parameters that is out of bounds by setting it 
-            to the other valid value. This behavious is especially needed when trying to shift rows up
-            or down in the very first or last row.
-* Input(s): integer:that - index of the first row
-            integer:other - index of the other (second) row
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnExchangeRows = function( that, other ) {
-    if ( that < 0 || that > this._iLine ) {
-        that = other;
-    } else if ( other < 0 || other > this._iLine ) {
-        other = that;
-    }
-    
-    var thatData = this._oDataTable.fnGetData( that );
-    var otherData = this._oDataTable.fnGetData( other );
-    
-    this._oDataTable.fnUpdate( thatData, other );
-    this._oDataTable.fnUpdate( otherData, that );
-    
-    this._fnUpdateIncrementColumns( Math.min( that, other ) );
-}
-
-
-/*
-* Function: _fnMapeDownCallback
-* Purpose:  Creates a row exchange callback with an offset of 1 (change the element with the one that has its index plus one)
-* Input(s): void
-* Returns:  function:exchangeCallback
-*
-*/
-SpreadSheet.prototype._fnMakeDownCallback = function() {
-    return this._fnMakeExchangeCallback( 1 );
-}
-
-/*
-* Function: _fnUpdateIncrementColumns
-* Purpose:  After deleting a row from the sheet, all incremental columns' values need to be updated. 
-            This function does this starting from passed line number (usually the deleted row) and
-            updates all information. On the last cell it invokes an index rebuild on the datatable
-            instance.
-* Input(s): integer:line - the line from which INCLUDING itself all fields shall be updated
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnUpdateIncrementColumns = function( line ) {
-    var incrementColumns = this._fnGetIncrementColumns();
-    
-    for ( var i = 0, iLen = incrementColumns.length; i < iLen; i++ ) {
-        var column = incrementColumns[i];
-        
-        for ( var j = line, jLen = this._iLine; j <= jLen; j++ ) {
-            if ( i === iLen - 1 && j === jLen ) {
-                this._oDataTable.fnUpdate( this._fnCreateCell( column, j ), j, column, false, true );
-            } else {
-                this._oDataTable.fnUpdate( this._fnCreateCell( column, j ), j, column, false, false );
-            }
-        }
-    }
-}
-
-/*
-* Function: _fnGetIncrementColumns
-* Purpose:  Determines which columns are of type increment and returns them.
-* Input(s): void
-* Returns:  array integer:incrementColumns - array holding the hidden indices of all type increment columns
-*
-*/
-SpreadSheet.prototype._fnGetIncrementColumns = function() {
-    var incrementColumns = [];
-
-    for ( var i = 0, iLen = this._oInit.Columns.length; i < iLen; i++ ) {
-        var column = this._oInit.Columns[i];
-        if ( column.type === SpreadSheet._oTypes.increment ) {
-            incrementColumns.push( i );
-        }
-    }
-    return incrementColumns;
-}
-
-/*
-* Function: _fnMakeKeystrokeCallback
-* Purpose:  Returns a callback function for the keypress, respectively keydown event handler in 
-*           _fnRegisterEvents - closures reference to this as self into the function. It will keep
-            track of the pushed buttons - i.e. left (e.g. left arrow) or right buttons (e.g. tab)
-            in form of flags. It also ensures that there are always enough lines in the table to
-            perform a focus action.
-* Input(s): void
-* Returns:  function:keypressCallback - the mentioned callback
-*
-*/
-SpreadSheet.prototype._fnMakeKeypressCallback = function () {
-    var self = this;
-
-    return function( event ) {
-        // Shift + tab or left arrow?
-        if ( event.keyCode == 9 && event.shiftKey || event.keyCode == 37 ) {
-            self._bWasRightButton = false;
-            self._bWasLeftButton = true;
-        
-        // Tab or right arrow?
-        } else if ( event.keyCode == 9 || event.keyCode == 39 ) {
-            self._bWasRightButton = true;
-            self._bWasLeftButton = false;
-            
-            // Make sure we have enough lines to fulfill the tab/right button
-            if ( self._iOldX === self._fnGetVisibleColumns() - 1 && self._iOldY === self._iLine ) {
-                self.fnInsertNewLine();
-            }
+        nColVisButton.css( 'height', nTableHead.height() );
+        nColVisButton.css( 'left', nTableHead.position().left + 'px' );
+        if ( !jQuery.browser.mozilla ) {
+            nColVisButton.css( 'top', nTableHead.position().top + 'px' );
+        } else {
+            // Firefox has a different idea of what the top position of this 
+            // button is, so we have to move it one pixel up
+            nColVisButton.css( 'top', nTableHead.position().top - 1 + 'px' );
         }
     }
 }
 
 /*
 * Function: fnInsertNewLine
-* Purpose:  Inserts a new empty line with all initial values set at the end of the SpreadSheet
-* Input(s): void
-* Returns:  string array:lineObjects - an array of string containing the html code inserted in each column (including hidden columns)
+* Purpose:  Inserts a new line at the end of the table containing default cells 
+*           for each column.
+* Input(s): boolean:bRedraw - a flag indicating whether to redraw the table 
+                              after inserting the line. Default: true. NOTE:
+                              when redraw is true pagination and sorting will be
+                              reset immediately.
+* Returns:  array string:asCell - an array containing the inserted cells
 *
 */
-SpreadSheet.prototype.fnInsertNewLine = function() {
-    var lineObjects = [];
-    
-    this._iLine++;
-    for ( var i = 0, iLen = this._oInit.Columns.length; i < iLen; i++ ) {
-        lineObjects.push( this._fnCreateCell( i, this._iLine ) );
+SpreadSheet.prototype.fnInsertNewLine = function( bRedraw ) {
+    if ( typeof bRedraw === 'undefined' ) bRedraw = true;
+    var asCells = [];
         
-    }
-    this._oDataTable.fnAddData( lineObjects );
-    
-    return lineObjects;
-}
-
-/*
-* Function: _fnCreateCell
-* Purpose:  Creates the content for a data cell given by the passed column index.
-            Currently there are five different types supported
-                1. Edit: Creates a number of spans, showing edit option button according to the options string
-                2. Increment: Creates a text input with a number inside equal to increment start + lines * increment
-                3. Text: Creates a text box with given initial string
-                4. Select: Uses a html form select element to display a nice drop down list
-                5. Checkbox: A simple checkbox that can already be marked
-            All elements are from the start of readonly and have to be explicitly enabled first
-* Input(s): integer:iColumn - the index of the column for which the cell is to be made
-* Returns:  string:cell - a string containing the html code for the respective cell
-*
-*/
-SpreadSheet.prototype._fnCreateCell = function( iColumn, iRow, val ) {
-    var css = [ SpreadSheet._oCss.SpreadSheet, SpreadSheet._oCss.ReadOnly ].join( ' ' );
-    var column = this._oInit.Columns[iColumn];
-    
-    switch( column.type ) {
-        case SpreadSheet._oTypes.edit:
-            var outerHtml = jQuery( '<div>' );
-            var div = jQuery( '<div class="' + css + ' ' + SpreadSheet._oCss.Edit + '">' );
-            css += ' ' + SpreadSheet._oCss.jQueryIcon;
-            var remove = jQuery( '<span class="' + css + ' ' + SpreadSheet._oCss.jQueryDelete + '">' );
-            var up = jQuery( '<span class="' + css + ' ' + SpreadSheet._oCss.jQueryUp + '">' );
-            var down = jQuery( '<span class="' + css + ' ' + SpreadSheet._oCss.jQueryDown + '">' );
-            
-            div.append( remove ).append( down ).append( up );;
-            outerHtml.append( div );
+    for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
+        var oColumn = this._aoColumns[ i ];
+        var iLines = this._oDataTable.fnSettings().aoData.length;
         
-            return outerHtml.html();
-    
-        case SpreadSheet._oTypes.increment:
-            css += ' ' + SpreadSheet._oCss.Increment;
-            var value = typeof val !== 'undefined' ? val : ( column.value + iRow * column.options )
-            return '<input type="text" class="' + css + '" value="' + value + '" readonly></input>';
-        
-        case SpreadSheet._oTypes.text:
-            var value = typeof val !== 'undefined' ? val : column.value;
-            return '<input type="text" class="' + css + '" value="' + value + '" readonly></input>';
-            
-        case SpreadSheet._oTypes.select:
-            var selection = '<select class="' + css + '" readonly>';
-            for ( var i = 0, iLen = column.options.length; i < iLen; i++ ) {
-                var selected = '';
-                if ( ( typeof val !== 'undefined' && i + 1 == val ) || ( typeof val === 'undefined' && column.value == column.options[i] ) ) {
-                    selected = ' selected';
-                }
-                selection += '<option' + selected + '>' + column.options[i] + '</option>';
-            }
-            selection += '</select>';
-            
-            return selection;
-            
-        case SpreadSheet._oTypes.checkbox:
-            var checked = ( typeof val !== 'undefined' && val ) || ( typeof val === 'undefined' && column.value ) ? ' checked' : '';
-            return '<input type="checkbox" class="' + css + '"' + checked + ' readonly></input>';
-            
-        default:
-            return '';
-    }
-}
-
-/*
-* Function: _fnSanitizeFocus
-* Purpose:  Sanitized the given cell to focus in the beginning - essentially converting the column name to an index, do type 
-            checking as well as skipping readonly columns.
-* Input(s): object:oInit - Initializer-like objects
-* Returns:  integer array:Focus - Two items array representing the final x and y position of the focus after sanitation
-*
-*/
-SpreadSheet.prototype._fnSanitizeFocus = function( oFocus ) {
-    // User did not specify focus? Well then, nothing to do here
-    if ( oFocus === null ) {
-        return null;
-    }
-    
-    var focus = oFocus;
-    // If the type of the focus is not integer or string, yell loudly otherwise
-    if ( typeof focus !== 'string' && this._fnIsInteger( focus ) ) {
-        throw 'Focus needs to be of type string or integer';
-    }
-    
-    // Set focus cell and X and Y position properly in the beginning - i.e. make sure the focus is not on a protected 
-    // column. However it is, we want to find the next free column to the right. We use a bit hacky way here and just 
-    // fake a right button push of the focus callback.
-    var x = this._fnHiddenToVisibleIndex( this._fnColumnToIndex( focus ) );
-    var y = 0;
-    
-    this._bWasRightButton = true;
-    var offsets = this._fnGetNextFreeCell( this, x, y );
-    this._bWasRightButton = false;
-    
-    x += offsets.columnOffset;
-    y += offsets.rowOffset;
-    
-    return [ x, y ];
-}
-
-/*
-* Function: _fnColumnToIndex
-* Purpose:  Converts a column name to its according index INCLUDING hidden column.
-            If the input is already given as an index, boundary checks are made and index is returned
-* Input(s): integer|string:oColumn - column to be converted
-* Returns:  integer:hiddenIndex - the converted index
-*
-*/
-SpreadSheet.prototype._fnColumnToIndex = function( oColumn ) {
-    // Column given as integer? Make bounds check and return if valid
-    if ( this._fnIsInteger( oColumn ) && oColumn >= 0 && oColumn < this._oInit.Columns.length ) {
-        return oColumn;
-
-    // Column to convert given as string? Look up if such a column is present and convert to index instead
-    } else if ( typeof oColumn === 'string' && jQuery.inArray( oColumn, this._asColumnNames ) > -1 ) {
-        return jQuery.inArray( oColumn, this._asColumnNames );
-    }
-    
-    throw 'Could not convert ' + oColumn + ' to column index';
-}
-
-/*
-* Function: _fnHiddenToVisibleIndex
-* Purpose:  Converts a hidden column index to its according visible counterpart.
-* Input(s): integer:iHiddenX - column index to be converted
-* Returns:  integer:iX - the converted index
-*
-*/
-SpreadSheet.prototype._fnHiddenToVisibleIndex = function( iHiddenX ) {
-    var iX = -1;
-    var currentColumnSettings = this._oDataTable.fnSettings().aoColumns;
-
-    for ( var i = 0, iLen = currentColumnSettings.length; i < iLen; i++ ) {
-        if ( currentColumnSettings[i].bVisible ) {
-            iX++;
-        }
-        if ( i === iHiddenX ) {
-            return iX;
+        if ( oColumn instanceof SpreadSheet.IncrementColumn ) {
+            asCells.push( oColumn.fnCreate( iLines ) );
+        } else {
+            asCells.push( oColumn.fnCreate() );
         }
     }
-    throw 'Could not convert ' + iHiddenX + ' to visible index';
+    this._oDataTable.fnAddData( asCells, bRedraw );
+    
+    return asCells;
 }
 
 /*
-* Function: _fnVisibleToHiddenIndex
-* Purpose:  Converts a visible column index to its according hidden counterpart.
-* Input(s): integer:iX - column index to be converted
-* Returns:  integer:iHiddenX - the converted hidden index
-*
-*/
-SpreadSheet.prototype._fnVisibleToHiddenIndex = function( iX ) {
-    var visibleColumns = -1;
-    var currentColumnSettings = this._oDataTable.fnSettings().aoColumns;
-    
-    for ( var i = 0, iLen = currentColumnSettings.length; i < iLen; i++ ) {
-        if ( currentColumnSettings[i].bVisible ) {
-            visibleColumns++;
-        }   
-        if ( iX === visibleColumns ) {
-            return i;
-        }
-    }   
-    throw 'Could not convert ' + iX + ' to hidden index';
-}
-
-/*
-* Function: _fnGetNextFreeCell
-* Purpose:  If the cell given by the coordinates is readonly this method will find another one that 
-            is available depending on the previous interaction with the table, which are i.e.:
-                1. Right Button: Skip cells as long as necessary to the right one by one (jumps also rows downwards)
-                2. Left Button: Skip cells as long as necessary to the left one by one (jumps rows upwards)
-                3. Neither: Stays in the previous position, comes in handy for clicks
-            Given that the cell is not readonly we will go there
-* Input(s): object:self - reference to the SpreadSheet instance, to enable calling this method in callbacks
-            integer:iX - x position (column) of the cursor EXCLUDING hidden columns
-            integer:iY - y position (row) of the cursor
-* Returns:  object:offsets - returns an object that contains the required offsets for column and row offset to the next 
-            free cell in "visible column units"
-*
-*/
-SpreadSheet.prototype._fnGetNextFreeCell = function( self, iX, iY ) {
-    var iHiddenX = self._fnVisibleToHiddenIndex( iX );
-    var visibleColumns = self._fnGetVisibleColumns();
-    var rowOffset = 0;
-    var columnOffset = 0;
-    
-    while ( jQuery.inArray( iHiddenX + columnOffset, self._aiReadonlyColumns ) > -1 ) {
-        // Right button? Move right as far we can or go to next row to the beginning
-        if ( self._bWasRightButton ) {
-            columnOffset++;
-            if ( iX + columnOffset >= visibleColumns ) {
-                columnOffset = -iX;
-                rowOffset++;
-            }
-            
-        // Left button? Move left as far as we get or go one row up to the end
-        } else if ( self._bWasLeftButton ) {
-            columnOffset--;
-            if ( iX + columnOffset < 0 ) {
-                columnOffset = visibleColumns - iX - 1;
-                rowOffset--;
-            }
-        }
-        
-        // Make sure we do not loop infinately
-        if ( rowOffset !== 0 && columnOffset === 0 ) {
-            break;
-        }
-    }   
-    return { 'columnOffset' : columnOffset, 'rowOffset' : rowOffset };
-}
-
-/*
-* Function: _fnGetVisibleColumns
-* Purpose:  Calculates how many rows are currently visible in the table. Handy method for interaction callbacks
-* Input(s): void
-* Returns:  integer:visibleColumns - the number of visible columns
-*
-*/
-SpreadSheet.prototype._fnGetVisibleColumns = function() {
-    var visibleColumns = 0;
-    var columnDefinitions = this._oDataTable.fnSettings().aoColumns;
-    
-    for ( var i = 0, iLen = columnDefinitions.length; i < iLen; i++ ) {
-        if ( columnDefinitions[i].bVisible ) {
-            visibleColumns++;
-        }
-    }
-    
-    return visibleColumns;
-}
-
-/*
-* Function: _fnGetHiddenColumns
-* Purpose:  Calculates how many rows are currently visible in the table. Handy method for interaction callbacks
-* Input(s): void
-* Returns:  integer:hiddenColumns - the number of hidden columns
-*
-*/
-SpreadSheet.prototype._fnGetHiddenColumns = function() {
-    var hiddenColumns = 0;
-    var columnDefinitions = this._oDataTable.fnSettings().aoColumns;
-    
-    for ( var i = 0, iLen = columnDefinitions.length; i < iLen; i++ ) {
-        if ( !columnDefinitions[i].bVisible ) {
-            hiddenColumns++;
-        }
-    }
-    
-    return hiddenColumns;
-}
-
-/*
-* Function: _fnCreateKeyTable
-* Purpose:  Creates a KeyTable instance and attaches it to the table as well as to the DataTable
-* Input(s): integer:iColumn - the index of the column for which the cell is to be made
-* Returns:  object:KeyTable - the KeyTable instance
-*
-*/
-SpreadSheet.prototype._fnCreateKeyTable = function( nTable, oDataTable, oInit ) {
-    var tableId = nTable.attr( 'id' );
-    
-    var keyTable = new KeyTable({
-        'table' : document.getElementById( tableId ),
-        'datatable' : oDataTable,
-        'initScroll' : true
-    });
-
-    keyTable.event.focus( null, null, this._fnMakeFocusCallback() );
-    // Use this and not the KeyTable options to force a initial focus callback, but only if focus is set
-    if ( oInit.Focus !== null ) {
-        keyTable.fnSetPosition( oInit.Focus[0], oInit.Focus[1] );
-    }
-    keyTable.event.blur( null, null, this._fnMakeBlurCallback() );
-    keyTable.event.action( null, null, this._fnMakeActionCallback() );
-    
-    return keyTable;
-}
-
-/*
-* Function: _fnMakeFocusCallback
-* Purpose:  Creates a callback that determines what happens on focusing a data cell - basically two alternatives are possible:
-                1. We have a protected column that we need to skip (including inserting new lines in case needed) and return or
-                2. It is a accessable cell, than track the new position and go into edit mode
-* Input(s): void
-* Returns:  function:FocusCallback - the callback
-*
-*/
-SpreadSheet.prototype._fnMakeFocusCallback = function() {
-    var self = this;
-    
-    return function( nCell, iX, iY ) {  
-        var iHiddenX = self._fnVisibleToHiddenIndex( iX );
-        
-        // Are we in a column that is protected?
-        if ( jQuery.inArray( iHiddenX, self._aiReadonlyColumns ) > -1 ) {
-        
-            if ( !self._bWasRightButton && !self._bWasLeftButton && self._oInit.Columns[iY].type === SpreadSheet._oTypes.edit ) {
-                self._oKeyTable.fnSetPosition( self._iOldX, self._iOldY );
-                return;
-            }
-            
-            // Was caused by a key stroke? Then skip cells
-            if ( self._bWasRightButton || self._bWasLeftButton ) {
-                var offsets = self._fnGetNextFreeCell( self, iX, iY );
-                var rowOffset = offsets.rowOffset;
-                var columnOffset = offsets.columnOffset;
-                
-                // Make sure we are not out of bounds
-                if ( iY + rowOffset >= 0 && iY + rowOffset <= self._iLine + 1 ) {
-                    if ( self._iOldY > self._iLine + 1 ) {
-                        self.fnInsertNewLine();
-                    }
-                    self._iOldX = iX + columnOffset;
-                    self._iOldY = iY + rowOffset;
-                }
-            }
-            
-            // Set position, leave function and they lived happily ever after :)
-            self._oKeyTable.fnSetPosition( self._iOldX, self._iOldY );
-            return
-        }
-        
-        // In a not protected cell we just have to track the position
-        self._iOldX = iX;
-        self._iOldY = iY;
-
-        // Make current cell editable
-        self._fnEdit( nCell );
-    };
-}
-
-/*
-* Function: _fnEdit
-* Purpose:  Shifts the passed cell into edit mode. This is mainly done by removing the ReadOnly
-            Css class as well as the readonly, respectively disabled attribute. Also makes sure
-            that text input field are completely selected from the start off.
-* Input(s): void
+* Function: fnDeleteLine
+* Purpose:  Deletes the line that contains the passed cell or the very last row.
+*           Updates all incremental columns on the way.
+* Input(s): node:nCell - the cell whichs parent row shall be deleted
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnEdit = function( nCell ) {
-    var iX = this._oDataTable.fnGetPosition( nCell )[1];
-    var iHiddenX = this._fnVisibleToHiddenIndex( iX );
+SpreadSheet.prototype.fnDeleteLine = function( nCell ) {
+    var iItems = this._oDataTable.fnSettings().aoData.length;    
+    // Do not allow deletions on the very last row
+    if ( iItems <= 1 ) return;
 
-    switch ( this._oInit.Columns[iHiddenX].type ) {
-        case SpreadSheet._oTypes.increment, SpreadSheet._oTypes.text:
-            var input = jQuery( 'input', nCell );
-            setTimeout( function() { input.select(); }, 0 );
-            break;
-            
-        case SpreadSheet._oTypes.select:
-            var input = jQuery( 'select', nCell );
-            break;
-            
-        case SpreadSheet._oTypes.checkbox:
-            var input = jQuery( 'input', nCell );
-            break;
-            
-        default:
-            break;
-    }
-    input.attr( 'readonly', false );
-    input.removeClass( SpreadSheet._oCss.ReadOnly );
-}
-
-/*
-* Function: _fnMakeBlurCallback
-* Purpose:  Creates a callback that describes the behaviour for leaving a data cell - i.e. save the content
-* Input(s): void
-* Returns:  function:BlurCallback - the callback
-*
-*/
-SpreadSheet.prototype._fnMakeBlurCallback = function() {
-    var self = this;
-    
-    return function( nCell, iX, iY ) {
-        if ( nCell === null || iX === null || iY === null ) {
-            return;
-        }
-        self._fnSave( nCell );
-    };
-}
-
-/*
-* Function: _fnSave
-* Purpose:  Saves the contents in the edited cell depending on its cell type. Mainly this requires
-            only to add the ReadOnly css flag again, set the field to readonly and update its content
-            int the underlying DataTables instance. However, Firefox needs sometimes a little extra 
-            treatement with the selections in textboxes when deselecting them.
-* Input(s): void
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnSave = function( nCell ) {
-    var position = this._oDataTable.fnGetPosition( nCell );
-    var iX = position[1];
-    var iHiddenX = this._fnVisibleToHiddenIndex( iX );
-    var iRow = position[0];
-
-    switch ( this._oInit.Columns[iHiddenX].type ) {
-    
-        case SpreadSheet._oTypes.increment, SpreadSheet._oTypes.text:               
-            var input = jQuery( 'input', nCell );
-            
-            // Makes sure that Firefox gets rid of the selection in the previous element... but only for text ;)
-            if ( jQuery.browser.mozilla ) {
-                for ( var i = 0, iLen = input.length; i < iLen; i++ ) {
-                    var element = input[i];
-                    if ( element.type === 'text' ) {
-                        element.selectionStart = 0;
-                        element.selectionEnd = 0;
-                    }
-                }
-            }
-            
-            break;
-            
-        case SpreadSheet._oTypes.select:
-            var input = jQuery( 'select', nCell );
-            break;
-            
-        case SpreadSheet._oTypes.checkbox:
-            var input = jQuery( 'input', nCell );
-            break;
-        
-        default:
-            return;
-    }
-    input.attr( 'readonly', true );
-    input.addClass( SpreadSheet._oCss.ReadOnly );
-    
-    // Update the internal DataTable instance by creating new cell content
-    var value = input.val();
-    // Checkboxes are bit special... so we have to make some checks here
-    if ( this._oInit.Columns[iHiddenX].type === SpreadSheet._oTypes.checkbox ) {
-        var checked = input.attr( 'checked' );
-        value = typeof checked === 'undefined' || checked === false ? false : true;
-    }
-    
-    this._oDataTable.fnUpdate( this._fnCreateCell( iHiddenX, iRow, value ), iRow, iHiddenX, false, true );
-}
-
-/*
-* Function: _fnMakeActionCallback
-* Purpose:  Creates a callback that describes the behaviour for pushing enter. At first save the content and 
-            check whether we are in the last row of the table in order to introduce a new empty line than.
-* Input(s): void
-* Returns:  function:ActionCallback - the callback
-*
-*/
-SpreadSheet.prototype._fnMakeActionCallback = function() {
-    var self = this;
-    
-    return function( nCell, iX, iY ) {
-        self._fnSave( nCell );
-        
-        if ( iY === self._iLine ) {
-            self.fnInsertNewLine();
-        }
-        self._oKeyTable.fnSetPosition( iX, iY + 1 );
-    };
-}
-
-/*
-* Function: fnFocus
-* Purpose:  Can be called in a multi SpreadSheet environment to determine which table is the first
-* Input(s): void
-* Returns:  void
-*
-*/
-SpreadSheet.prototype.fnFocus = function() {
-    if ( this._oInit.Focus !== null ) {
-        var nCell = this._oKeyTable.fnGetCurrentTD();
-    
-        // Make the other tables loose focus
-        jQuery( nCell ).click();
-        // Refocus the cell that we had before
-        this._fnEdit( nCell );
-    }
-}
-
-/*
-* Function: fnGetData
-* Purpose:  Retrieves data from the SpreadSheet depending on the given parameters. There are three possibilities:
-                1. No parameter is passed - the whole table will be returned as a 2D-array
-                2. First parameter is given - the row indicated by the parameters will be returned as an array
-                3. Two parameters are given - the content of the cell at the given coordinates is returned
-* Input(s): integer:iRow - index of the row
-            integer:iColumn - index of the column
-* Returns:  string|string array|array string array:content - the content of the table
-*
-*/
-SpreadSheet.prototype.fnGetData = function( iRow, iColumn ) {
-    var data = this._oDataTable.fnGetData( iRow, iColumn );
-    
-    if ( typeof iRow === 'undefined' && typeof iColumn === 'undefined' ) {
-        return this._fnUnwrapTable( data );
-    } else if ( typeof iRow !== 'undefined' && typeof iColumn === 'undefined' ) {
-        return this._fnUnwrapRow( data );
-    } else if ( typeof iRow !== 'undefined' && typeof iColumn !== 'undefined' ) {
-        return this._fnUnwrapCell( data );
-    }
-}
-
-/*
-* Function: _fnUnwrapTable
-* Purpose:  Removes the input/selection tags from a whole table for each individual cell
-* Input(s): array string array:aasTable - the table as a 2D array as given for instance by this._oDataTable.fnGetData()
-* Returns:  array string array:table - the unwrapped table content
-*
-*/
-SpreadSheet.prototype._fnUnwrapTable = function( aasTable ) {
-    var table = [];
-    for( var i = 0, iLen = aasTable.length; i < iLen; i++ ) {
-        table.push( this._fnUnwrapRow( aasTable[i] ) );
-    }
-    return table;
-}
-
-/*
-* Function: _fnUnwrapRow
-* Purpose:  Removes the input/selection tags from a given row for each individual cell and stores the value in an 
-            object under the respective column name where it was read from
-* Input(s): string array:asCells - the row as an array as given for instance by this._oDataTable.fnGetData( index )
-* Returns:  object:row - the unwrapped row content
-*
-*/
-SpreadSheet.prototype._fnUnwrapRow = function( asCells ) {
-    var row = {};
-    for ( var i = 0, iLen = asCells.length; i < iLen; i++ ) {
-        row[ this._asColumnNames[i] ] =  this._fnUnwrapCell( asCells[i] );
-    }
-    return row;
-}
-
-/*
-* Function: _fnUnwrapCell
-* Purpose:  Removes the input/selection tags from an individual cell. The wrapping is needed to enable inputting
-            during editing the SpreadSheet (see e.g. _fnEdit, _fnSave, _fnMakeCell for more details). During an
-            export this is unwanted and therefore removed.
-* Input(s): string:sCell - the cell as for instance by this._oDataTable.fnGetData( index, otherIndex )
-* Returns:  string:unwrapped - the unwrapped cell content
-*
-*/
-SpreadSheet.prototype._fnUnwrapCell = function( sCell ) {
-    var nCell = jQuery( sCell );
-    
-    if ( nCell.is( 'input:text' ) ) {
-        return nCell.val()
-    } else if ( nCell.is( 'input:checkbox' ) ) {
-        return this._fnChecked( nCell );
-    } else if ( nCell.is( 'select' ) ) {
-        return nCell.children( 'option:selected' ).val();
+    // Find line to be deleted - i.e. row of cell or very last one
+    if ( typeof nCell !== 'undefined' ) {
+        var iRow = this._oDataTable.fnGetPosition( nCell )[ 0 ];
     } else {
-        return null;
+        var iRow = iItems - 1;
     }
+    
+    // Delete the row using the DataTable instance
+    this._oDataTable.fnDeleteRow( iRow );
+    
+    // Update the increment columns
+    // Iterate over all columns
+    for ( var j = 0, jLen = this._aoColumns.length; j < jLen; j++ ) {
+        var oColumn = this._aoColumns[ j ];
+        
+        // Iterate over each row that is an increment column and update it
+        if ( ! (oColumn instanceof SpreadSheet.IncrementColumn) ) continue;
+        for ( var i = iRow; i < iItems - 1; i++ ) {
+            this._oDataTable.fnUpdate( oColumn.fnCreate( i ), i, j, false, false );
+        }
+    }
+    
+    this._oDataTable.fnDraw( false );
 }
 
 /*
-* Function: _fnChecked
-* Purpose:  Checks whether the given node (mainly intended for checkboxes) has an attribute
-            checked set and returns a string true if so otherwise false
-* Input(s): node:nCheckbox - the node to be checked
-* Returns:  string:checked - string indicating checked status
+* Function: fnExchangeRows
+* Purpose:  Exchanges the row the contains the given cell with the row that has 
+*           a relative distance to the selected row having the passed offset.
+* Input(s): node:nCell - the cell whichs parent row shall be deleted
+            integer:iOffset - the offset
+* Returns:  void
 *
 */
-SpreadSheet.prototype._fnChecked = function( nCheckbox ) {
-    var checked = nCheckbox.attr( 'checked' );
-    return typeof checked === 'undefined' || checked === false ? 'false' : 'true';
+SpreadSheet.prototype.fnExchangeRows = function( nCell, iOffset ) {
+    var iRowA = this._oDataTable.fnGetPosition( nCell )[ 0 ];
+    var iRowB = iRowA + iOffset;
+    var iItems = this._oDataTable.fnSettings().aoData.length;
+    
+    if ( iRowB < 0 || iRowB >= iItems ) return;
+    
+    var asContentA = this._oDataTable.fnGetData( iRowA );
+    var asContentB = this._oDataTable.fnGetData( iRowB );
+    
+    for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
+        var oColumn = this._aoColumns[ i ];
+    
+        if ( ! ( oColumn instanceof SpreadSheet.IncrementColumn ) ) continue;
+        var sBuffer = asContentA[ i ];
+        asContentA[ i ] = asContentB[ i ];
+        asContentB[ i ] = sBuffer;
+    }
+    
+    this._oDataTable.fnUpdate( asContentA, iRowB, null, false, false );
+    this._oDataTable.fnUpdate( asContentB, iRowA, null, false, true);
+}
+
+/*
+* Function: fnGetId
+* Purpose:  Returns the HTML id of the passed node or the id of the table that 
+*           contains the SpreadSheet if argument is undefined
+* Input(s): node:nNode - the node to get the id of
+* Returns:  stringLsId - the id
+*
+*/
+SpreadSheet.prototype.fnGetId = function( nNode ) {
+    if ( typeof nNode === 'undefined' ) nNode = this._nTable;
+
+    return jQuery( nNode ).attr( 'id' );
+}
+
+/*
+* Function: fnUpdate
+* Purpose:  Updates a given cell with the newly passed content. It will be 
+*           directly reflected on the underlying DataTable instance, by default
+*           without a table redraw to keep the focus and clicks on the table.
+* Input(s): node:nCell - the cell to be updated
+*           string:sNew - new content as string
+*           boolean:bRedraw - parameter telling whether to redraw the table
+* Returns:  void
+*
+*/
+SpreadSheet.prototype.fnUpdate = function( nCell, sNew, bRedraw ) {
+    if ( typeof bRedraw === 'undefined' ) bRedraw = false;
+    nCell = jQuery( nCell )[ 0 ];
+    
+    var aiPosition = this._oDataTable.fnGetPosition( nCell );
+    var iRow = aiPosition[ 0 ];
+    var iColumn = aiPosition[ 2 ] ;
+    
+    try {
+        this._oDataTable.fnUpdate( sNew, iRow, iColumn, bRedraw );
+    } catch ( error ) {
+        this._oDataTable.fnDraw( false );
+    }
+}
+
+SpreadSheet.prototype.fnGetData = function() {
+    var aasData = this._oDataTable.fnGetData();
+    var aaoResult = [];
+
+    for ( var j = 0, jLen = aasData.length; j < jLen; j++ ) {
+        var bValid = false;
+        var aoResult = [];
+                
+        for ( var i = 0, iLen = this._aoColumns.length; i < iLen; i++ ) {
+            var oColumn = this._aoColumns[ i ];
+            var oValue = oColumn.fnValue( aasData[ j ][ i ] );
+            
+            if ( oColumn instanceof SpreadSheet.EditColumn ) continue;
+            aoResult.push( oValue );
+            bValid = bValid || !oColumn.fnIsDefault( oValue );
+        }
+        
+        if ( bValid ) aaoResult.push( aoResult );
+    }
+    
+    return aaoResult;
 }
