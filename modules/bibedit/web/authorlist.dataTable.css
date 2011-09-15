@@ -182,23 +182,13 @@ table.DataTable td.left{
 }
 
 
-
-
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * DataTables row classes
  */
  
-tr.odd {
-	background-color: #E2E4FF;
-}
-
-tr.even {
+tr {
 	background-color: white;
 }
-
-
-
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -283,43 +273,6 @@ td.details {
 
 .paging_full_numbers span.paginate_active {
 	background-color: #99B3FF;
-}
-
-table.DataTable tr.even.row_selected td {
-	background-color: #B0BED9;
-}
-
-table.DataTable tr.odd.row_selected td {
-	background-color: #9FAFD1;
-}
-
-
-/*
- * Sorting classes for columns
- */
-/* For the standard odd/even */
-tr.odd td.sorting_1 {
-	background-color: #D3D6FF;
-}
-
-tr.odd td.sorting_2 {
-	background-color: #DADCFF;
-}
-
-tr.odd td.sorting_3 {
-	background-color: #E0E2FF;
-}
-
-tr.even td.sorting_1 {
-	background-color: #EAEBFF;
-}
-
-tr.even td.sorting_2 {
-	background-color: #F2F3FF;
-}
-
-tr.even td.sorting_3 {
-	background-color: #F9F9FF;
 }
 
 /*

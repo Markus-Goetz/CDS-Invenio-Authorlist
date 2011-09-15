@@ -37,7 +37,8 @@
 }
 
 .paging_full_numbers .ui-button {
-	padding: 2px 6px;
+    top : -1px;
+	padding: 0px 6px;
 	margin: 0;
 	cursor: pointer;
 	* cursor: hand;
@@ -60,7 +61,8 @@
 }
 
 .dataTables_info {
-	padding-top: 3px;
+	margin : 2px 20px;
+	vertical-align : center;
 }
 
 table.DataTable thead th {
@@ -70,7 +72,22 @@ table.DataTable thead th {
 }
 
 div.dataTables_wrapper .ui-widget-header {
-	font-weight: normal;
+    position : relative;
+    z-index : 1000;
+    padding : 0px;
+}
+
+div.dataTables_length {
+    margin : 0px 0px 0px 20px;
+    padding-top : 1px;
+}
+
+div.dataTables_filter {
+    margin : 0px 20px 1px 0px;
+}
+
+div.dataTables_paginate {
+    margin : 1px 23px 1px 0px;
 }
 
 /*

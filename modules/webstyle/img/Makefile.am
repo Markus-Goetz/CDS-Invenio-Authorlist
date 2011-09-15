@@ -46,6 +46,17 @@ img_DATA = add-small.png \
            aid_reset.png \
            aid_to_other.png \
            aid_to_other_gray.png \
+           authorlist_ui-bg_flat_0_aaaaaa_40x100.png \
+           authorlist_ui-bg_flat_55_ffffff_40x100.png \
+           authorlist_ui-bg_flat_75_6699cc_40x100.png \
+           authorlist_ui-bg_flat_75_ffffff_40x100.png \
+           authorlist_ui-bg_flat_95_ffffff_40x100.png \
+           authorlist_ui-bg_gloss-wave_50_6699cc_500x100.png \
+           authorlist_ui-bg_gloss-wave_75_ffcc99_500x100.png \
+           authorlist_ui-icons_000000_256x240.png \
+           authorlist_ui-icons_6699cc_256x240.png \
+           authorlist_ui-icons_cd0a0a_256x240.png \
+           authorlist_ui-icons_ffffff_256x240.png \
            balloon_arrow_left_shadow.png \
            balloon_bottom_left_shadow.png \
            balloon_bottom_shadow.png \

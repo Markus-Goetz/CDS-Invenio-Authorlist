@@ -37,10 +37,73 @@ class Template:
         return """
                %s
                %s
-               <script type="text/javascript">
-                   jQuery( document).ready( function() {
-                       var authorlist = new Authorlist( 'authorlist' );
-                   });
+               <script>
+               jQuery( document).ready( function() {   
+                      authors = new SpreadSheet( 'authorlist', {
+                           columns : [ {
+                               'title'       : '',
+                               'type'        : 'increment',
+                               'width'       : '2%%'
+                           }, {
+                               'title'       : 'Edit',
+                               'type'        : 'edit'
+                           },  {
+                               'title'       : 'Family Name'
+                           }, {
+                               'title'       : 'Given Name'
+                           }, {
+                               'title'       : 'Name On Paper'
+                           }, {
+                               'title'       : 'Alive',
+                               'type'        : 'checkbox',
+                               'value'       : true
+                           }, {
+                               'title'       : 'Affiliations',
+                               'type'        : 'textselect',
+                               'value'       : 'Affiliated with',
+                               'options'     : [ 'Affiliated with', 'Also at', 'On leave from', 'Visitor' ],
+                               'width'       : '33%%',
+                               'extendable'  : true
+                           }, {
+                               'title'       : 'Inspire ID',
+                               'width'       : '9%%'
+                           } ]
+                      } );
+                      
+                      affiliations = new SpreadSheet( 'authorlist', {
+                           columns : [ {
+                               'title'       : '',
+                               'type'        : 'increment',
+                               'width'       : '2%%'
+                           }, {
+                               'title'       : 'Edit',
+                               'type'        : 'edit'
+                           }, {
+                               'title'       : 'Acronym',
+                               'width'       : '5%%',
+                           }, {
+                               'title'       : 'Name And Address',
+                           }, {
+                               'title'       : 'Domain',
+                               'width'       : '30%%',
+                           }, {
+                               'title'       : 'Member',
+                               'type'        : 'checkbox',
+                               'value'       : true,
+                               'width'       : '4%%'
+                           }, {
+                               'title'       : 'Spires ID',
+                               'width'       : '9%%'
+                           } ]
+                      } );
+                      
+                      var button = jQuery( '<button type="button">Click</input>' );
+                      button.click( function() {
+                           console.log( authors.fnGetData() );
+                           console.log( affiliations.fnGetData() );
+                      } );
+                      jQuery( 'body' ).append( button );
+                  });
                </script>
                """ %  (self.style(), self.scripts())
         

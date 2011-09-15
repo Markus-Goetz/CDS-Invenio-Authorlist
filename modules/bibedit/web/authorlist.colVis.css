@@ -38,19 +38,18 @@ div.ColVis_collectionBackground {
 
 div.ColVis_collection {
 	position: relative;
-	width: 150px;
-	background-color: #f9f9f9;
-	padding: 3px;
-	border: 1px solid #ccc;
+	width: 200px;
+	background-color: #ffffff;
+	padding: 0px;
 	z-index: 1102;
 }
 
 div.ColVis_collection button.ColVis_Button {
-	height: 30px;
+	height: 24px;
 	width: 100%;
-	margin-right: 3px;
-	margin-bottom: 2px;
-	padding: 3px 5px;
+	margin-right: 0px;
+	margin-bottom: 0px;
+	padding: 0px 20px 0px 0px;
 	cursor: pointer;
 	*cursor: hand;
 	text-align: left;
@@ -67,12 +66,22 @@ div.ColVis_catcher {
 }
 
 span.ColVis_radio {
-	display: inline-block;
+	display: inline;
 	width: 20px;
 }
 
+span.ColVis_title {
+    position : relative;
+    left : 5px;
+}
+
+
+span.ColVis_radio + span.ColVis_title {
+    top : -2px;
+}
+
 button.ColVis_Restore {
-	margin-top: 15px;
+	margin-top: 0px;
 }
 
 button.ColVis_Restore span {

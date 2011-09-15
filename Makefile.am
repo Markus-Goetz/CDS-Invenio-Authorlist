@@ -162,6 +162,7 @@ install-jquery-plugins: install-jquery-plugins
 	wget http://autobahn.tablesorter.com/jquery.tablesorter.zip && \
 	wget http://plugins.jquery.com/files/Uploadify-v2.1.3.zip -O uploadify.zip && \
 	wget http://www.datatables.net/download/build/jquery.dataTables.min.js && \
+	wget http://datatables.net/download/build/jquery.dataTables.js && \
 	wget http://www.datatables.net/download/build/ColVis.min.js && \
 	mv ColVis.min.js jquery.dataTables.ColVis.min.js && \
 	unzip jquery.tablesorter.zip && \

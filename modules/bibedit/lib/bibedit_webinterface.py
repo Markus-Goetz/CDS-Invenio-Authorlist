@@ -225,68 +225,7 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
-        if argd['state'] == 'foo':
-            return page(title        = 'Foo Test',
-                        metaheaderadd = """<style type="text/css" title="SmoothnessTheme"> 
-@import "http://pcgs2x2400h03.cern.ch/img/authorlist.dataTable.css";
-@import "http://pcgs2x2400h03.cern.ch/img/authorlist.dataTable.jquery-ui.css";
-@import "http://pcgs2x2400h03.cern.ch/img/jquery-ui/themes/smoothness/jquery-ui.css";
-@import "http://pcgs2x2400h03.cern.ch/img/authorlist.colVis.css";
-@import "http://pcgs2x2400h03.cern.ch/img/authorlist.spreadSheet.new.css";</style> 
-
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.min.js"></script> 
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery-ui-1.7.3.custom.min.js"></script> 
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.js"></script> 
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/jquery.dataTables.ColVis.min.js"></script>
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/authorlist.spreadSheet.new.js"></script>
-<script type="text/javascript" src="http://pcgs2x2400h03.cern.ch/js/authorlist_select.js"></script>
-<script type="text/javascript"> 
-   jQuery( document).ready( function() {   
-       spreadSheet = new SpreadSheet( 'authorlist', {
-            columns : [ {
-                'type'  : 'edit',
-            }, {
-                'title' : 'Index',
-                'type'  : 'increment',
-            }, {
-                'title' : 'Text Select',
-                'type'  : 'textselect',
-                'text'  : 'muh',
-                'value' : 'simple foo',
-                'options'   : [ 'asd', 'xcv' ]
-            }, {
-                'title' : 'Checkbox',
-                'value' : true,
-                'width' : '15%',
-                'type'  : 'checkbox'
-            },{
-                'title' : 'Select',
-                'value' : 'a',
-                'type'  : 'select',
-                'options' : [ 'b', 'c', 'd', 'e' ]
-            }, {
-                'title' : 'Extendable',
-                'value' : 'extendable foo',
-                'width' : '40%'
-            }, ]
-       } );
-       
-       var button = jQuery( '<button type="button">Click</input>' );
-       button.click( function() {
-            console.log( spreadSheet.fnGetData() );
-       } );
-       jQuery( 'body' ).append( button );
-   });
-</script>""",           body          = authorlist_templates.body(),
-                        errors        = [],
-                        warnings      = [],
-                        uid           = getUid(req),
-                        language      = ln,
-                        navtrail      = navtrail,
-                        lastupdated   = __lastupdated__,
-                        req           = req)
-        
-        elif argd['state'] == 'new':
+        if argd['state'] == 'new':
             return page(title         = _('Author list'),
                         metaheaderadd = authorlist_templates.metaheader(),
                         body          = authorlist_templates.body(),
@@ -297,32 +236,6 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         navtrail      = navtrail,
                         lastupdated   = __lastupdated__,
                         req           = req)
-                        
-        elif argd['state'] == 'export':
-            form = wash_urlargd(form, {'mode' : (str, 'json'),
-                                       'data' : (str, '{}')})
-                                       
-            converter = authorlist_engine.Converters.get(form['mode'])
-            
-            if converter is None:
-                return page(title       = _('Author list'),
-                            body        = 'INVALID REQUEST',
-                            errors      = [],
-                            warnings    = [],
-                            uid         = getUid(req),
-                            language    = ln,
-                            navtrail    = navtrail,
-                            lastupdated = __lastupdated__,
-                            req         = req)
-                            
-            else:
-                data = json.loads(form['data'])
-                file_name = 'attachement; filename="%s"' % converter.FILE_NAME
-                
-                req.content_type = converter.CONTENT_TYPE
-                req.headers_out['Content-disposition'] = file_name
-                
-                return authorlist_engine.dumps(data, converter)
                         
         else:
             return page(title       = _('Author list'),

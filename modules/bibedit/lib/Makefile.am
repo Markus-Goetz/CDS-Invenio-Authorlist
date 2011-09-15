@@ -52,11 +52,9 @@ js_DATA = bibedit_display.js \
           marcxml.js \
           bibedit_clipboard.js \
           bibedit_template_interface.js \
-          authorlist.js \
-          authorlist.keyTable.js \
           authorlist.spreadSheet.js \
-          authorlist.spreadSheet.new.js \
-          authorlist_select.js
+          authorlist.jquery-ui-1.8.6.min.js \
+          authorlist.select.js
 
 EXTRA_DIST = $(pylib_DATA) \
              $(js_DATA)
