@@ -67,7 +67,12 @@ class Template:
                            }, {
                                'title'       : 'Inspire ID',
                                'width'       : '9%%'
-                           } ]
+                           } ],
+                           
+                           load : [
+                               [ 1, '', 'Bond', 'James', 'Bond, J.', true, [[ 'MI-6', 'Affiliated with' ]], '007' ],
+                               [ 2, '', 'Jackson', 'Michael', 'Jackson, M.', false, [[ 'King of Pop', 'Visitor' ]], '12345' ]
+                           ]
                       } );
                       
                       affiliations = new SpreadSheet( 'authorlist', {
