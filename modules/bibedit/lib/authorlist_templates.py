@@ -82,10 +82,13 @@ class Template:
                                'title'       : 'Acronym',
                                'width'       : '5%%',
                            }, {
+                               'title'       : 'Umbrella',
+                               'width'       : '5%%',
+                           }, {
                                'title'       : 'Name And Address',
                            }, {
                                'title'       : 'Domain',
-                               'width'       : '30%%',
+                               'width'       : '20%%',
                            }, {
                                'title'       : 'Member',
                                'type'        : 'checkbox',

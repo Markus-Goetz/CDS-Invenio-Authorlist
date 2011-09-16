@@ -1133,10 +1133,17 @@ SpreadSheet.TextSelectColumn.prototype._fnRegisterClick = function( sTable, sTd 
 
 
 
-
+/*
+* Function: SpreadSheet.Cursor
+* Purpose:  Constructor
+* Input(s): void
+* Returns:  SpreadSheet.Cursor instance when called with new, else undefined
+*
+*/
 SpreadSheet.Cursor = function() {
     var bExists = jQuery( '.' + SpreadSheet.CSS.Cursor ).length > 0;
 
+    // There are already cursor elements on the page, so use them as elements
     if ( bExists ) {
         this._nTop      = jQuery( '.' + SpreadSheet.CSS.CursorTop );
         this._nRight    = jQuery( '.' + SpreadSheet.CSS.CursorRight );
@@ -1144,6 +1151,7 @@ SpreadSheet.Cursor = function() {
         this._nLeft     = jQuery( '.' + SpreadSheet.CSS.CursorLeft );
         this._nCube     = jQuery( '.' + SpreadSheet.CSS.CursorCube );
         
+    // No cursor elements where found, so we better create some
     } else {
         this._nTop      = jQuery( '<div>' ).addClass( SpreadSheet.CSS.CursorTop );
         this._nRight    = jQuery( '<div>' ).addClass( SpreadSheet.CSS.CursorRight );
@@ -1152,6 +1160,7 @@ SpreadSheet.Cursor = function() {
         this._nCube     = jQuery( '<div>' ).addClass( SpreadSheet.CSS.CursorCube );
     }
     
+    // Helping elements that contains all cursor elements
     this._nAll = jQuery().add( this._nTop ).add( this._nRight )
                          .add( this._nBottom ).add( this._nLeft )
                          .add( this._nCube );
@@ -1159,14 +1168,35 @@ SpreadSheet.Cursor = function() {
     if ( !bExists ) jQuery( 'body' ).append( this._nAll );
 }
 
+/*
+* Function: fnShow
+* Purpose:  Makes all cursor elements visible
+* Input(s): void
+* Returns:  void
+*
+*/
 SpreadSheet.Cursor.prototype.fnShow = function() {
     this._nAll.show();
 }
 
+/*
+* Function: fnHide
+* Purpose:  Hides all elements of the cursor
+* Input(s): void
+* Returns:  void
+*
+*/
 SpreadSheet.Cursor.prototype.fnHide = function() {
     this._nAll.hide();
 }
 
+/*
+* Function: fnPointTo
+* Purpose:  Overlays the passed cell with a cursor
+* Input(s): node:nCell - the cell to be pointed to
+* Returns:  void
+*
+*/
 SpreadSheet.Cursor.prototype.fnPointTo = function( nCell ) {
     nCell = jQuery( nCell );
     
@@ -1185,8 +1215,9 @@ SpreadSheet.Cursor.prototype.fnPointTo = function( nCell ) {
     this._nBottom.offset( oOffset ).width( iWidth );
     oOffset.top -= iHeight;
     
-    oOffset.left += iWidth - 3;
-    oOffset.top += iHeight - 3;
+    // Center the small cube on the right lower corner
+    oOffset.left += iWidth - this._nCube.width() / 2;
+    oOffset.top += iHeight - this._nCube.height() / 2;
     this._nCube.offset( oOffset );
 }
 
@@ -1550,31 +1581,19 @@ SpreadSheet.prototype._fnCreateTable = function() {
 *
 */
 SpreadSheet.prototype._fnEnter = function( nCell ) {
-    var nRow = nCell.parent();
-    var anRows = nRow.parent().children();
-    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
-    var iY = anRows.index( nRow );
+
+    // DataTables and SpreadSheet specific variables
+    var oSettings  = this._oDataTable.fnSettings();
+    var aiDisplay  = oSettings.aiDisplay;
+    var aiPosition = this._oDataTable.fnGetPosition( nCell[ 0 ] );
+    var iItems     = oSettings.aoData.length;
     
-    var oSettings = this._oDataTable.fnSettings();
-    var iEnd = oSettings._iDisplayEnd;
-    var iItems = iEnd - oSettings._iDisplayStart;
-    var iTotalItems = oSettings.aoData.length;
-    
-    var oColumn = this._aoColumns[ iX ];
-    
-    if ( iY == iItems - 1 && iEnd == iTotalItems ) {
-        this.fnInsertNewLine( false );
-        this._oDataTable.fnPageChange( 'last' );
-        
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.last().children().eq( iX );
-        
-        oColumn.fnKeyout( nCell );
-        this._fnFocusin( nNewCell );
-        oColumn.fnKeyin( nNewCell );
-    } else {
-        this._fnMoveDown( nCell );
-    }
+    // Position
+    var iY      = aiPosition[ 0 ];
+    var iLookup = aiDisplay[ aiDisplay.indexOf( iY ) + 1 ];
+    // Boundary check for the last line
+    if ( typeof iLookup === 'undefined' ) this.fnInsertNewLine( false );
+    this._fnMoveDown( nCell );
 }
 
 /*
@@ -1596,41 +1615,41 @@ SpreadSheet.prototype._fnEscape = function( nFocus ) {
 /*
 * Function: _fnFocusin
 * Purpose:  Add the focus to the passed cell
-* Input(s): node:nTd - the cell
+* Input(s): node:nCell - the cell
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnFocusin = function( nTd ) {
-    var nCell = jQuery( nTd );
-    var nRow = nCell.parent();
-    var iIndex = nRow.children().index( nCell );
-    var nColumn = this._nTable.find( 'th:eq(' + iIndex + ')' );
+SpreadSheet.prototype._fnFocusin = function( nCell ) {
+    var nCell   = jQuery( nCell );
+    var nRow    = nCell.parent().children().first();
+    var iX      = this._oDataTable.fnGetPosition( nCell[ 0 ] )[ 1 ];
+    var nColumn = this._nTable.find( 'th' ).eq( iX );
     
     this._oCursor.fnShow();
     this._oCursor.fnPointTo( nCell );
 
-    nTd.addClass( SpreadSheet.CSS.Focus );
-    nRow.children().first().addClass( SpreadSheet.CSS.Active );
+    nCell.addClass( SpreadSheet.CSS.Focus );
+    nRow.addClass( SpreadSheet.CSS.Active );
     nColumn.addClass( SpreadSheet.CSS.Active );
 }
 
 /*
 * Function: _fnFocusout
 * Purpose:  Remove the focus from the one passed cell
-* Input(s): node:nTd - the cell
+* Input(s): node:nCell - the cell
 * Returns:  void
 *
 */
-SpreadSheet.prototype._fnFocusout = function( nTd ) {
-    var nCell = jQuery( nTd );
-    var nRow = nCell.parent();
-    var iIndex = nRow.children().index( nCell );
-    var nColumn = this._nTable.find( 'th:eq(' + iIndex + ')' );
+SpreadSheet.prototype._fnFocusout = function( nCell ) {
+    var nCell   = jQuery( nCell );
+    var nRow    = nCell.parent().children().first();
+    var iX      = this._oDataTable.fnGetPosition( nCell[ 0 ] )[ 1 ];
+    var nColumn = this._nTable.find( 'th' ).eq( iX );
     
     this._oCursor.fnHide();
     
-    nTd.removeClass( SpreadSheet.CSS.Focus );
-    nRow.children().first().removeClass( SpreadSheet.CSS.Active );
+    nCell.removeClass( SpreadSheet.CSS.Focus );
+    nRow.removeClass( SpreadSheet.CSS.Active );
     nColumn.removeClass( SpreadSheet.CSS.Active );
 }
 
@@ -1700,23 +1719,6 @@ SpreadSheet.prototype._fnMakeDrawCallback = function() {
     }
 }
 
-SpreadSheet.prototype._fnMoveCursorTo = function( nCell ) {
-    var oOffset = nCell.offset();
-    var iWidth = nCell.width();
-    var iHeight = nCell.height();
-    
-    var nTop = this._nCursor.children().eq( 0 );
-    var nRight = this._nCursor.children().eq( 1 );
-    var nBottom = this._nCursor.children().eq( 2 );
-    var nLeft = this._nCursor.children().eq( 3 );
-    var nCube = this._nCursor.children().eq( 4 );
-    
-    nTop.offset( oOffset ).width( iWidth ).height( 2 );
-    nLeft.offset( oOffset ).height( iHeight ).width( 2 );
-    
-    this._nCursor.css( 'display', 'block' );
-}
-
 /*
 * Function: _fnMoveDown
 * Purpose:  Moves the focus cursor from the passed cell one down. While doing so 
@@ -1728,37 +1730,33 @@ SpreadSheet.prototype._fnMoveCursorTo = function( nCell ) {
 *
 */
 SpreadSheet.prototype._fnMoveDown = function( nCell ) {
-    var nRow = nCell.parent();
-    var anRows = nRow.parent().children();
-    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
-    var iY = anRows.index( nRow );
+    // DataTables and SpreadSheet specific variables
+    var oSettings  = this._oDataTable.fnSettings();
+    var aoSColumns = this._aoColumns;
+    var aiDisplay  = oSettings.aiDisplay;
+    var aiPosition = this._oDataTable.fnGetPosition( nCell[ 0 ] );
+    var iItems     = oSettings.aoData.length;
+    var iEnd       = oSettings._iDisplayEnd;
     
-    var oSettings = this._oDataTable.fnSettings();
-    var iItems = oSettings._iDisplayEnd - oSettings._iDisplayStart;
-    var iTotalItems = oSettings.aoData.length;
-    var iPerPage = oSettings._iDisplayLength;
+    // Position
+    var iX      = aiPosition[ 2 ];
+    var iY      = aiPosition[ 0 ];
+    var iLookup = aiDisplay[ aiDisplay.indexOf( iY ) + 1 ];
+    // Boundary check for the last line
+    var iMovedY = typeof iLookup === 'undefined' ? iY : iLookup;
     
-    var oColumn = this._aoColumns[ iX ];
-    var nNewCell = nCell;
+    // Change the page to the last one if required
+    if ( iMovedY >= iEnd ) this._oDataTable.fnPageChange( 'last' );
     
-    // Same page just one row down
-    if ( iY >= 0 && iY < iItems - 1 ) {
-        nNewCell = anRows.eq( iY + 1 ).children().eq( iX );
-    // End of page or Would have to flip page; but no row available
-    } else if ( iY >= 0 && iY == iItems - 1 && 
-              ( iItems < iPerPage || iTotalItems % iPerPage == 0 ) ) {
-        nNewCell = anRows.eq( iItems - 1 ).children().eq( iX );
-
-    // Have to flip page; and another row is available
-    } else if ( iY >= 0 && iY == iItems - 1 && iTotalItems % iPerPage > 0 ) {
-        this._oDataTable.fnPageChange( 'next' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( 0 ).children().eq( iX );
-    }
+    // Lookup the column object and the respective row
+    var oColumn      = this._aoColumns[ iX ]; 
+    var nMovedRow    = jQuery( oSettings.aoData[ iMovedY ].nTr );
+    var nMovedCell   = nMovedRow.children().eq( iX );
     
+    // Defocus old cell and focus new cell
     oColumn.fnKeyout( nCell );
-    this._fnFocusin( nNewCell );
-    oColumn.fnKeyin( nNewCell );
+    this._fnFocusin( nMovedCell );
+    oColumn.fnKeyin( nMovedCell );
 }
 
 /*
@@ -1772,49 +1770,53 @@ SpreadSheet.prototype._fnMoveDown = function( nCell ) {
 *
 */
 SpreadSheet.prototype._fnMoveLeft = function( nCell ) {
-    var nRow = nCell.parent();
-    var anRows = nRow.parent().children();
-    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
-    var iY = anRows.index( nRow );
+    // DataTables and SpreadSheet specific variables
+    var oSettings  = this._oDataTable.fnSettings();
+    var aoDColumns = oSettings.aoColumns;
+    var aoSColumns = this._aoColumns;
+    var aiDisplay  = oSettings.aiDisplay;
+    var aiPosition = this._oDataTable.fnGetPosition( nCell[ 0 ] );
+    var iStart     = oSettings._iDisplayStart;
     
-    var oSettings = this._oDataTable.fnSettings();
-    var iStart = oSettings._iDisplayStart;
-    var iPerPage = oSettings._iDisplayLength;
-    
+    // Position
+    var iY      = aiPosition[ 0 ];
+    var iX      = aiPosition[ 2 ];    
+    var iMovedY = iY
     var iMovedX = iX;
-    var iMovedY = iY;
     
-    // Calculate the next free cell
     do {
+        // Move the hidden x index to the left
         iMovedX--;
+        // Out of bounds? Go one line up and to the very last column
         if ( iMovedX < 0 ) {
-            iMovedX = this._aoColumns.length - 1;
-            iMovedY--;
+            var iLookup = aiDisplay[ aiDisplay.indexOf( iMovedY ) - 1 ];        
+            iMovedX = aoDColumns.length - 1;
+            iMovedY = typeof iLookup === 'undefined' ? -1 : iLookup;
         }
-    } while ( this._aoColumns[ iMovedX ].bProtected );
+    // As long as the cursor is on a invisible column or a protected -> move!
+    } while( !aoDColumns[iMovedX].bVisible || aoSColumns[iMovedX].bProtected );
     
-    var oColumn = this._aoColumns[ iX ];
-    var oNewColumn = this._aoColumns[ iMovedX ];
-    var nNewCell = nCell;
-    
-    // We stay on the same page after the move
-    if ( iMovedY >= 0 ) {
-        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    // Refocus to the very first cell
+    if ( iMovedY < 0 ) {
+        iMovedY = iY;
+        iMovedX = iX;
         
-    // Top most cell
-    } else if ( iMovedY < 0 && iStart == 0 ) {
-        oColumn = this._aoColumns[ iX ];
-        nNewCell = anRows.eq( iY ).children().eq( iX );
-        
-    // We have to flip the page first
-    } else if ( iMovedY < 0 && iStart > 0 ) {
+    // Change the page if needed
+    } else if ( iMovedY < iStart ) {
         this._oDataTable.fnPageChange( 'previous' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iMovedX );
     }
+    
+    // Find the column objects and the new cell
+    iMovedX          = this._fnToVisibleColumn( iMovedX );
+    var oColumn      = this._aoColumns[ iX ];
+    var oMovedColumn = this._aoColumns[ iMovedX ];    
+    var nMovedRow    = jQuery( oSettings.aoData[ iMovedY ].nTr );
+    var nMovedCell   = nMovedRow.children().eq( iMovedX );
+    
+    // Defocus old cell and focus new cell
     oColumn.fnKeyout( nCell );
-    this._fnFocusin( nNewCell );
-    oNewColumn.fnKeyin( nNewCell );
+    this._fnFocusin( nMovedCell );
+    oMovedColumn.fnKeyin( nMovedCell );
 }
 
 /*
@@ -1830,59 +1832,47 @@ SpreadSheet.prototype._fnMoveLeft = function( nCell ) {
 *
 */
 SpreadSheet.prototype._fnMoveRight = function( nCell ) {
-    var nRow = nCell.parent();
-    var anRows = nRow.parent().children();
-    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
-    var iY = anRows.index( nRow );
+    // DataTables and SpreadSheet specific variables   
+    var oSettings  = this._oDataTable.fnSettings();
+    var aoDColumns = oSettings.aoColumns;
+    var aoSColumns = this._aoColumns;
+    var aiDisplay  = oSettings.aiDisplay;
+    var aiPosition = this._oDataTable.fnGetPosition( nCell[ 0 ] );
+    var iEnd       = oSettings._iDisplayEnd;
+    var iItems     = oSettings.aoData.length;
     
-    var oSettings = this._oDataTable.fnSettings();
-    var iItems = oSettings._iDisplayEnd - oSettings._iDisplayStart;
-    var iPerPage = oSettings._iDisplayLength;
-    var iTotalItems = oSettings.aoData.length;
-    
+    // Position
+    var iY      = aiPosition[ 0 ];
+    var iX      = aiPosition[ 2 ];    
+    var iMovedY = iY
     var iMovedX = iX;
-    var iMovedY = iY;
     
     do {
+        // Move the hidden x index to the right
         iMovedX++;
-        if ( iMovedX >= this._aoColumns.length ) {
+        // Out of bounds? Go one line down and to the very first column
+        if ( iMovedX >= aoDColumns.length ) {
+            var iLookup = aiDisplay[ aiDisplay.indexOf( iMovedY ) + 1 ];
             iMovedX = 0;
-            iMovedY++;
+            iMovedY = typeof iLookup === 'undefined' ? iItems : iLookup;
         }
-    } while ( this._aoColumns[ iMovedX ].bProtected );
+    // As long as the cursor is on a invisible column or a protected -> move!
+    } while( !aoDColumns[iMovedX].bVisible || aoSColumns[iMovedX].bProtected );
     
-    var oColumn = this._aoColumns[ iX ];
-    var oNewColumn = this._aoColumns[ iMovedX ];
-    var nNewCell = nCell;
+    if ( iMovedY >= iItems ) this.fnInsertNewLine();
+    if ( iMovedY >= iEnd ) this._oDataTable.fnPageChange( 'last' );
     
-    // just go down if we can
-    if ( iMovedY < iItems ) {
-        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
+    // Find the column objects and the new cell
+    iMovedX          = this._fnToVisibleColumn( iMovedX );
+    var oColumn      = this._aoColumns[ iX ];
+    var oMovedColumn = this._aoColumns[ iMovedX ];    
+    var nMovedRow    = jQuery( oSettings.aoData[ iMovedY ].nTr );
+    var nMovedCell   = nMovedRow.children().eq( iMovedX );
     
-    // very last cell, introduce new line on the same page
-    } else if ( iMovedY >= iItems &&  iItems < iPerPage ) {
-        this.fnInsertNewLine();
-        this._oDataTable.fnPageChange( 'last' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( iMovedY ).children().eq( iMovedX );
-    
-    // very last cell, introduce new line on the next page
-    } else if ( iMovedY >= iItems && iTotalItems % iPerPage == 0 ) {
-        this.fnInsertNewLine();
-        this._oDataTable.fnPageChange( 'last' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
-        
-    // flip the page
-    } else if ( iMovedY >= iItems && iTotalItems % iPerPage > 0 ) {
-        this._oDataTable.fnPageChange( 'next' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( 0 ).children().eq( iMovedX );
-    }
-    
+    // Defocus old cell and focus new cell
     oColumn.fnKeyout( nCell );
-    this._fnFocusin( nNewCell );
-    oNewColumn.fnKeyin( nNewCell );
+    this._fnFocusin( nMovedCell );
+    oMovedColumn.fnKeyin( nMovedCell );
 }
 
 /*
@@ -1895,36 +1885,33 @@ SpreadSheet.prototype._fnMoveRight = function( nCell ) {
 *
 */
 SpreadSheet.prototype._fnMoveUp = function( nCell ) {
-    var nRow = nCell.parent();
-    var anRows = nRow.parent().children();
-    var iX = nRow.find( 'td.' + SpreadSheet.CSS.Clickable ).index( nCell );
-    var iY = anRows.index( nRow );
+    // DataTables and SpreadSheet specific variables
+    var oSettings  = this._oDataTable.fnSettings();
+    var aoSColumns = this._aoColumns;
+    var aiDisplay  = oSettings.aiDisplay;
+    var aiPosition = this._oDataTable.fnGetPosition( nCell[ 0 ] );
+    var iItems     = oSettings.aoData.length;
+    var iStart     = oSettings._iDisplayStart;
     
-    var oSettings = this._oDataTable.fnSettings();
-    var iStart = oSettings._iDisplayStart;
-    var iPerPage = oSettings._iDisplayLength;
+    // Position
+    var iX      = aiPosition[ 2 ];
+    var iY      = aiPosition[ 0 ];
+    var iLookup = aiDisplay[ aiDisplay.indexOf( iY ) - 1 ];
+    // Boundary check for the first line
+    var iMovedY = typeof iLookup === 'undefined' ? 0 : iLookup;
     
-    var oColumn = this._aoColumns[ iX ];
-    var nNewCell = nCell;
+    // Change the page if the y position is out of bounds
+    if ( iMovedY < iStart) this._oDataTable.fnPageChange( 'previous' );
     
-    // Same page just one row up; if available
-    if ( iY > 0 ) {
-        nNewCell = anRows.eq( iY - 1 ).children().eq( iX );
-        
-    // First page; refocus top most cell
-    } else if ( iY == 0 && iStart == 0 ) {
-        nNewCell = anRows.eq( 0 ).children().eq( iX );
+    // Lookup the column object and the respective row
+    var oColumn      = this._aoColumns[ iX ]; 
+    var nMovedRow    = jQuery( oSettings.aoData[ iMovedY ].nTr );
+    var nMovedCell   = nMovedRow.children().eq( iX );
     
-    // Previous page; down most cell   
-    } else if ( iY == 0 && iStart > 0 ) {
-        this._oDataTable.fnPageChange( 'previous' );
-        anRows = jQuery( '#' + this.fnGetId() + ' > tbody > tr' );
-        nNewCell = anRows.eq( iPerPage - 1 ).children().eq( iX );
-    }
-    
+    // Defocus old cell and focus new cell
     oColumn.fnKeyout( nCell );
-    this._fnFocusin( nNewCell );
-    oColumn.fnKeyin( nNewCell );
+    this._fnFocusin( nMovedCell );
+    oColumn.fnKeyin( nMovedCell );
 }
 
 /*
@@ -1949,20 +1936,16 @@ SpreadSheet.prototype._fnRegisterClicks = function( nTable ) {
     // in the same cell. On the first click I blur and on the second click I 
     // will go into edit mode. You want me to behave like this?
     jQuery( sId ).delegate( sTd, 'focus', function( event ) {
-        var nTarget = jQuery( event.currentTarget );
-        var iX = nTarget.parent().children().index( nTarget );
-        
+        var iX = self._oDataTable.fnGetPosition( event.currentTarget )[ 1 ];        
         if ( !self._aoColumns[ iX ].bProtected ) {
-            self._fnFocusin( nTarget );
+            self._fnFocusin( event.currentTarget );
         }
     } );
     
     jQuery( sId ).delegate( sTd, 'focusout', function( event ) {
-        var nTarget = jQuery( event.currentTarget );
-        var iX = nTarget.parent().children().index( nTarget );
-        
+        var iX = self._oDataTable.fnGetPosition( event.currentTarget )[ 1 ];        
         if ( !self._aoColumns[ iX ].bProtected ) {
-            self._fnFocusout( nTarget );
+            self._fnFocusout( event.currentTarget );
         }
     } );
 }
@@ -2036,4 +2019,23 @@ SpreadSheet.prototype._fnSanitizeParameters = function( oInit ) {
     oSanitized.focus = oInit.focus || null;
     
     return oSanitized;
+}
+
+/*
+* Function: _fnToVisibleColumn
+* Purpose:  Transforms an index into the columns array (that can contain hidden 
+            columns) into the respective column index as visually seen.
+* Input(s): integer:iColumn - the hidden index
+* Returns:  integer:iVisible - the visible index
+*
+*/
+SpreadSheet.prototype._fnToVisibleColumn = function( iColumn ) {
+    var aoColumns = this._oDataTable.fnSettings().aoColumns;
+    var iVisible = -1;
+    
+    for ( var i = 0; i <= iColumn; i++ ) {
+        if ( aoColumns[ i ].bVisible ) iVisible++;
+    }
+    
+    return iVisible;
 }
