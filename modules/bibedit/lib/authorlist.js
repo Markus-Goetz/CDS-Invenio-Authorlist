@@ -1,227 +1,305 @@
-Authorlist._oCss = {
-    'Authorlist' :      'Authorlist',
-    'Fieldset' :        'AuthorlistFieldset',
-    'Legend' :          'AuthorlistLegend',
-    'Label' :           'AuthorlistLabel',
-    'Input' :           'AuthorlistInput'
+/*
+* Variable: SpreadSheet.CSS
+* Purpose:  Central enumeration and mapping for the CSS classes used in the 
+*           Authorlist module. Eases consistent look up and renaming if 
+*           required.
+*
+*/
+Authorlist.CSS = {
+    // Section classes
+    'Authorlist'        : 'Authorlist',
+    'Headline'          : 'AuthorlistHeadline',
+    'Paper'             : 'AuthorlistPaper',
+    'Reference'         : 'AuthorlistReference',
+    'Authors'           : 'AuthorlistAuthors',
+    'Affiliations'      : 'AuthorlistAffiliations',
+    
+    // Input classes
+    'Label'             : 'AuthorlistLabel',
+    'Input'             : 'AuthorlistInput',
+    
+    // Button classes
+    'Button'            : 'AuthorlistButton',
+    'Add'               : 'AuthorlistAdd',
+    'AddIcon'           : 'ui-icon-plusthick',
+    'Remove'            : 'AuthorlistRemove',
+    'RemoveIcon'        : 'ui-icon-minusthick'
 }
 
-Authorlist._oJSON = {
-    'Collaboration' :   'Collaboration',
-    'PaperTitle' :      'PaperTitle',
-    'ReferenceId' :     'ReferenceId',
-    'Authors' :         'Authors',
-    'Affiliations' :    'Affiliations'
+/*
+* Function: Authorlist
+* Purpose:  Constructor
+* Input(s): string:sId - Id of the html element the Authorlist will be embedded
+*                        into (preferably a div).
+* Returns:  Authorlist instance when called with new, else undefined
+*
+*/
+function Authorlist( sId ) {
+    this._nParent = jQuery( '#' + sId );
+    this._nParent.addClass( Authorlist.CSS.Authorlist );
+
+    this._oPaper = this._fnCreatePaper( this._nParent );
+    this._oAuthors = this._fnCreateAuthors( this._nParent );
+    this._oAffiliations = this._fnCreateAffiliations( this._nParent );
 }
 
-Authorlist._oForm = {
-    'URL' :             '/record/edit/authorlist?state=export',
-    'Data' :            'data',
-    'Mode' :            'mode'
+/*
+* Function: _fnCreateAffiliations
+* Purpose:  Creates all DOM-elements required for the affiliations - i.e. the 
+*           headline and the wrapping div - embeds a SpreadSheet instance in it 
+*           and returns the created object afterwards.
+* Input(s): node:nParent - the node where the affiliations will be embedded
+* Returns:  object:oAffiliations - the SpreadSheet instance
+*
+*/
+Authorlist.prototype._fnCreateAffiliations = function( nParent ) {
+    var nAffiliations = jQuery( '<div>' )
+    nAffiliations.attr( 'id', Authorlist.CSS.Affiliations );
+    this._fnCreateHeadline( nAffiliations, 'Affiliations' );
+    nParent.append( nAffiliations );
+    
+    var oAffiliations = new SpreadSheet( Authorlist.CSS.Affiliations, {
+        columns : [ {
+            'title'       : '',
+            'type'        : 'increment',
+            'width'       : '2%'
+        }, {
+            'title'       : 'Edit',
+            'type'        : 'edit'
+        }, {
+            'title'       : 'Acronym',
+            'width'       : '5%',
+        }, {
+            'title'       : 'Umbrella',
+            'width'       : '5%',
+        }, {
+            'title'       : 'Name And Address',
+        }, {
+            'title'       : 'Domain',
+            'width'       : '20%',
+        }, {
+            'title'       : 'Member',
+            'type'        : 'checkbox',
+            'value'       : true,
+            'width'       : '4%'
+        }, {
+            'title'       : 'Spires ID',
+            'width'       : '9%'
+        } ]
+    } );
+
+    return oAffiliations;
 }
 
-function Authorlist( sDiv ) {
-    this._nDiv = this._fnSanitizeDiv( sDiv );
-    this._nDiv.addClass( Authorlist._oCss.Authorlist );
-      
-    this._nForm = this._fnCreateForm();
+/*
+* Function: _fnCreateAuthors
+* Purpose:  Creates all DOM-elements required for the authors - i.e. the 
+*           headline and the wrapping div - embeds a SpreadSheet instance in it 
+*           and returns the created object afterwards.
+* Input(s): node:nParent - the node where the authors will be embedded
+* Returns:  object:oAffiliations - the SpreadSheet instance
+*
+*/
+Authorlist.prototype._fnCreateAuthors = function( nParent ) {
+    var nAuthors = jQuery( '<div>' )
+    nAuthors.attr( 'id', Authorlist.CSS.Authors );
+    this._fnCreateHeadline( nAuthors, 'Authors' );
+    nParent.append( nAuthors );
     
-    this._nMode = this._fnCreateContent( Authorlist._oForm.Mode );
-    this._nData = this._fnCreateContent( Authorlist._oForm.Data );
+    var oAuthors = new SpreadSheet( Authorlist.CSS.Authors, {
+        columns : [ {
+            'title'       : '',
+            'type'        : 'increment',
+            'width'       : '2%'
+        }, {
+            'title'       : 'Edit',
+            'type'        : 'edit'
+        },  {
+            'title'       : 'Family Name'
+        }, {
+            'title'       : 'Given Name'
+        }, {
+            'title'       : 'Name On Paper'
+        }, {
+            'title'       : 'Alive',
+            'type'        : 'checkbox',
+            'value'       : true
+        }, {
+            'title'       : 'Affiliations',
+            'type'        : 'textselect',
+            'value'       : 'Affiliated with',
+            'options'     : [ 'Affiliated with', 
+                              'Also at', 
+                              'On leave from', 
+                              'Visitor' ],
+            'width'       : '33%',
+            'extendable'  : true
+        }, {
+            'title'       : 'Inspire ID',
+            'width'       : '9%'
+        } ]
+    } );
     
-    this._nPaper = this._fnCreateFieldset( 'Paper' );
-    this._nCollaboration = this._fnCreateInputField( 'Collaboration', this._nPaper );
-    this._nPaperTitle = this._fnCreateInputField( 'Paper title', this._nPaper );
-    this._nReferenceId = this._fnCreateInputField( 'Reference Id', this._nPaper );
-
-    this._nAuthors = this._fnCreateFieldset( 'Authors' );
-    this._nAuthorsDiv = this._fnCreateDiv( sDiv, '-authors' );
-    this._nAuthors.append( this._nAuthorsDiv );
-    
-    this._nAffiliations = this._fnCreateFieldset( 'Affiliations' );
-    this._nAffiliationsDiv = this._fnCreateDiv( sDiv, '-affiliations' );
-    this._nAffiliations.append( this._nAffiliationsDiv );
-    
-    this._nControls = this._fnCreateFieldset( 'Edit' );
-    this._fnCreateFormatButton( 'JSON', this._nControls );
-    this._fnCreateFormatButton( 'AuthorsXML', this._nControls );
-    this._fnCreateFormatButton( 'CMS Tex', this._nControls );
-
-    this._nForm.append( this._nMode, this._nData, this._nPaper, 
-                        this._nAuthors, this._nAffiliations, this._nControls );
-    this._nDiv.append( this._nForm );
-    
-    this._oAuthors = this._fnCreateAuthorsSheet();
-    this._oAffiliations = this._fnCreateAffiliationsSheet();
- 
-    this._oAuthors.fnFocus();
+    return oAuthors;
 }
 
-Authorlist.prototype._fnSanitizeDiv = function( sDiv ) {
-    if ( typeof sDiv !== 'string' ) {
-        throw 'Id of element the Authormanager is embedded into, has to be given as a string, but was ' + typeof sDiv;
-    }
- 
-    var nDiv = jQuery( '#' + sDiv );
-    if ( nDiv.length === 0 ) {
-        throw 'Element with id ' + sDivId + ' is not present, could not initialize Authormanager';
-    }
-    return nDiv;
+/*
+* Function: _fnCreateHeadline
+* Purpose:  Small helper function that will create a generic authorlist headline
+* Input(s): node:nParent - the node going to get a headline
+            string:sTitle - the title string
+* Returns:  node:nHeadline - the created headline node
+*
+*/
+Authorlist.prototype._fnCreateHeadline = function( nParent, sTitle ) {
+    var nHeadline = jQuery( '<h2>' + sTitle + '</h2>' );
+    nHeadline.addClass( Authorlist.CSS.Headline );
+    nParent.append( nHeadline );
+    
+    return nHeadline;
 }
 
-Authorlist.prototype._fnCreateForm = function() {
-    var nForm = jQuery( '<form>' );
-    nForm.attr( {
-        'method' : 'POST',
-        'action' : Authorlist._oForm.URL
-    } );    
+/*
+* Function: _fnCreatePaper
+* Purpose:  Creates a new headline for the paper information, creates a Paper 
+*           objects, embeds it into the parent and returns it.
+* Input(s): node:nParent - where to append the paper information to
+* Returns:  object:oPaper - the Paper instance.
+*
+*/
+Authorlist.prototype._fnCreatePaper = function( nParent ) {
+    var nPaper = jQuery( '<div>' );
+    nPaper.attr( 'id', Authorlist.CSS.Paper );
+    this._fnCreateHeadline( nPaper, 'Paper' );
+    nParent.append( nPaper );
     
-    return nForm;
+    return new Paper( Authorlist.CSS. Paper );
 }
 
-Authorlist.prototype._fnCreateContent = function( sContent ) {
-    var nInput = jQuery( '<input type="hidden">' );
-    nInput.attr( 'name', sContent );
+
+
+
+
+
+
+
+/*
+* Function: Paper
+* Purpose:  Constructor
+* Input(s): string:sId - Id of the html element the Paper will be embedded
+*                        into (preferably a div).
+* Returns:  Paper instance when called with new, else undefined
+*
+*/
+function Paper( sId ) {
+    this._nParent = jQuery( '#' + sId );
     
-    return nInput;
+    this._nPaper = this._fnCreateInput( 'Paper Title' );
+    this._nCollaboration = this._fnCreateInput( 'Collaboration' );
+    this._nReference = this._fnCreateInput( 'Reference Ids', Authorlist.CSS.Reference + '0' );
+    this._fnCreateButtons( this._nReference);
+    
+    this._nParent.append( this._nPaper, this._nCollaboration, this._nReference );
+    
+    var test = jQuery( '<div>Test</div>' );
+    test.addClass( 'ui-state-error' );
+    jQuery( 'body' ).append( test );
+    test.dialog( {
+        'modal' : true
+    } );
 }
 
-Authorlist.prototype._fnCreateFieldset = function( sTitle ) {
-    var nFieldset = jQuery( '<fieldset>' );
-    nFieldset.addClass( Authorlist._oCss.Fieldset );
+/*
+* Function: fnGetData
+* Purpose:  Retrieves the paper information in a further processable form. EMPTY
+*           lines are SKIPPED in the result.
+* Input(s): void
+* Returns:  object:oResult - an object containing the paper information
+*
+*/
+Paper.prototype.fnGetData = function() {
+    var oResult = {};
+    var sSelector = '.' + Authorlist.CSS.Input;
     
-    var nLegend = jQuery( '<legend>' + sTitle + '</legend>' );
-    nLegend.addClass( Authorlist._oCss.Legend );
+    oResult.paper_title = this._nPaper.find( sSelector ).val();
+    oResult.collaboration = this._nCollaboration.find( sSelector ).val();
+    oResult.reference_ids = [];
     
-    nFieldset.append( nLegend );
+    this._nReference.find( sSelector ).each( function( iIndex, nInput ) {
+        var sValue = jQuery( nInput ).val();
+        
+        // Skip empty elements
+        if ( sValue.match( /^\s*$/) !== null ) return true;
+        oResult.reference_ids.push( sValue );
+    } );
     
-    return nFieldset;
+    return oResult;
 }
 
-Authorlist.prototype._fnCreateInputField = function( sLabel, nWhere ) {
-    var nParagraph = jQuery( '<p>' );
+/*
+* Function: _fnCreateButtons
+* Purpose:  Creates the add and remove buttons next to the passed parent and 
+*           assigns callbacks to them.
+* Input(s): node:nParent - the parent node to which to append the buttons
+* Returns:  void
+*
+*/
+Paper.prototype._fnCreateButtons = function( nParent ) {
+    // Create button elements
+    var nAddButton = jQuery( '<button>' );
+    var nRemoveButton = jQuery( '<button>' );
     
-    var nLabel = jQuery( '<label>' + sLabel + '</label>');
-    nLabel.attr( 'for', sLabel );
-    nLabel.addClass( Authorlist._oCss.Label );
+    // Add classes and add them to the DOM
+    nAddButton.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Add );
+    nRemoveButton.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Remove );
+    nParent.append( nAddButton, nRemoveButton );
     
-    var nInput = jQuery( '<input type="text">' );
-    nInput.attr( 'id', nLabel );
-    nInput.addClass( Authorlist._oCss.Input );
+    // Transform them to jQuery UI buttons
+    nAddButton.button( {
+        'label' : 'Add',
+        'icons' : {
+            'primary' : Authorlist.CSS.AddIcon
+        }
+    } );
+    nRemoveButton.button( {
+        'label' : 'Remove',
+        'icons' : {
+            'primary' : Authorlist.CSS.RemoveIcon
+        }
+    } );
     
-    nParagraph.append( nLabel, nInput );
-    nWhere.append( nParagraph );
-    
-    return nInput;
-}
-
-Authorlist.prototype._fnCreateDiv = function( sDiv, sExtension ) {
-    var nDiv = jQuery( '<div>' );
-    nDiv.attr( 'id', sDiv + sExtension );
-    
-    return nDiv;
-}
-
-Authorlist.prototype._fnCreateAuthorsSheet = function() {
-    return new SpreadSheet( this._nAuthorsDiv.attr( 'id' ), {
-        'Columns' : [ {
-            'name'      : 'Edit',
-            'readonly'  : true,
-            'type'      : 'edit'
-         }, {
-            'name'      : 'Index',
-            'readonly'  : true,
-            'type'      : 'increment',
-            'value'     : 1, // start with 1
-            'options'   : 1  // increment by 1
-         }, {
-            'name'      : 'Family name'
-         }, {
-            'name'      : 'Given name'
-         }, {
-            'name'      : 'Suffix'
-         }, {
-            'name'      : 'Name on paper'
-         }, {
-            'name'      : 'Alive',
-            'type'      : 'checkbox',
-            'visible'   : true,
-            'value'     : true
-         }, {
-            'name'      : 'Affiliated with'
-         }, {
-            'name'      : 'Also at'
-         }, {
-            'name'      : 'Inspire ID'
-         } ],
-        'Focus' : 'Family name'
-    });
-}
-
-Authorlist.prototype._fnCreateAffiliationsSheet = function() {
-    return new SpreadSheet( this._nAffiliationsDiv.attr( 'id' ), {
-        'Columns' : [ {
-            'name'      : 'Edit',
-            'readonly'  : true,
-            'type'      : 'edit'
-         }, {
-            'name'      : 'Index',
-            'readonly'  : true,
-            'type'      : 'increment',
-            'value'     : 1, // start with 1
-            'options'   : 1  // increment by 1
-         }, {
-            'name'      : 'Short name'
-         }, {
-            'name'      : 'Name and Address'
-         }, {
-            'name'      : 'Domain'
-         }, {
-            'name'      : 'Member',
-            'type'      : 'checkbox',
-            'value'     : true
-         }, {
-            'name'      : 'Spires ID'
-         } ],
-    });
-}
-
-Authorlist.prototype.fnGetData = function( self ) {
-    // Funny construct to be able to use this function in callbacks where this
-    // would point to a DOM element rather then on the instance of this class
-    if ( typeof self === 'undefined' ) {
-        self = this;
-    }
-    
-    var result = {};
-    
-    result[Authorlist._oJSON.Collaboration] = self._nCollaboration.val();
-    result[Authorlist._oJSON.PaperTitle] = self._nPaperTitle.val();
-    result[Authorlist._oJSON.ReferenceId] = self._nReferenceId.val();
-    
-    result[Authorlist._oJSON.Authors] = self._oAuthors.fnGetData();
-    result[Authorlist._oJSON.Affiliations] = self._oAffiliations.fnGetData();
-    
-    return result;
-}
-
-Authorlist.prototype._fnCreateFormatButton = function( sText, nWhere ) {
-    var nButton = jQuery( '<input type="button">' );
-    nButton.attr( 'value', sText );
-    nButton.click( this._fnMakeFormatButtonCallback() );
-    nWhere.append( nButton );
-    
-    return nButton;
-}
-
-Authorlist.prototype._fnMakeFormatButtonCallback = function() {
+    // Register callbacks for add and remove action
     var self = this;
+    nAddButton.click( function() {
+        // Just create a new input line with no title
+        var iInputs = nParent.find( '.' + Authorlist.CSS.Input ).length;
+        nParent.append( self._fnCreateInput ( '', Authorlist.CSS.Reference + iInputs ) );
+    } );
+    nRemoveButton.click( function() {
+        var iInputs = nParent.find( '.' + Authorlist.CSS.Input ).length;
+        
+        // Delete the last input as long as there will be one line remaining
+        if ( iInputs <= 1 ) return;
+        nParent.children().last().remove();
+    } );
+}
+
+/*
+* Function: _fnCreateInput
+* Purpose:  Creates a label and input element combination and returns it.
+* Input(s): string:sTitle - the title/label string of the field
+*           string:sId - the id that the input field will get
+* Returns:  node:nWrapper - a element containing the label and input field
+*
+*/
+Paper.prototype._fnCreateInput = function( sTitle, sId ) {
+    if ( typeof sId === 'undefined' ) sId = sTitle.replace( / /g, '' );
     
-    return function() {
-        self._nMode.val( jQuery(this).val() );
-        self._nData.val( JSON.stringify( self.fnGetData() ) );
-        console.log(JSON.stringify( self.fnGetData() ));
-        self._nForm.submit();
-        console.log("foo");
-    }
+    var nWrapper = jQuery( '<div>' );
+    var nLabel = jQuery( '<label for="' + sId + '">' + sTitle + '</label>' );
+    nLabel.addClass( Authorlist.CSS.Label );
+    var nInput = jQuery( '<input id="' + sId + '">' );
+    nInput.addClass( Authorlist.CSS.Input );
+    
+    return nWrapper.append( nLabel, nInput );
 }

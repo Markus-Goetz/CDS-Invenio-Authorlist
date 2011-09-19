@@ -39,84 +39,13 @@ class Template:
                %s
                <script>
                jQuery( document).ready( function() {   
-                      authors = new SpreadSheet( 'authorlist', {
-                           columns : [ {
-                               'title'       : '',
-                               'type'        : 'increment',
-                               'width'       : '2%%'
-                           }, {
-                               'title'       : 'Edit',
-                               'type'        : 'edit'
-                           },  {
-                               'title'       : 'Family Name'
-                           }, {
-                               'title'       : 'Given Name'
-                           }, {
-                               'title'       : 'Name On Paper'
-                           }, {
-                               'title'       : 'Alive',
-                               'type'        : 'checkbox',
-                               'value'       : true
-                           }, {
-                               'title'       : 'Affiliations',
-                               'type'        : 'textselect',
-                               'value'       : 'Affiliated with',
-                               'options'     : [ 'Affiliated with', 'Also at', 'On leave from', 'Visitor' ],
-                               'width'       : '33%%',
-                               'extendable'  : true
-                           }, {
-                               'title'       : 'Inspire ID',
-                               'width'       : '9%%'
-                           } ],
-                           
-                           load : [
-                               [ 1, '', 'Bond', 'James', 'Bond, J.', true, [[ 'MI-6', 'Affiliated with' ]], '007' ],
-                               [ 2, '', 'Jackson', 'Michael', 'Jackson, M.', false, [[ 'King of Pop', 'Visitor' ]], '12345' ]
-                           ]
-                      } );
-                      
-                      affiliations = new SpreadSheet( 'authorlist', {
-                           columns : [ {
-                               'title'       : '',
-                               'type'        : 'increment',
-                               'width'       : '2%%'
-                           }, {
-                               'title'       : 'Edit',
-                               'type'        : 'edit'
-                           }, {
-                               'title'       : 'Acronym',
-                               'width'       : '5%%',
-                           }, {
-                               'title'       : 'Umbrella',
-                               'width'       : '5%%',
-                           }, {
-                               'title'       : 'Name And Address',
-                           }, {
-                               'title'       : 'Domain',
-                               'width'       : '20%%',
-                           }, {
-                               'title'       : 'Member',
-                               'type'        : 'checkbox',
-                               'value'       : true,
-                               'width'       : '4%%'
-                           }, {
-                               'title'       : 'Spires ID',
-                               'width'       : '9%%'
-                           } ]
-                      } );
-                      
-                      var button = jQuery( '<button type="button">Click</input>' );
-                      button.click( function() {
-                           console.log( authors.fnGetData() );
-                           console.log( affiliations.fnGetData() );
-                      } );
-                      jQuery( 'body' ).append( button );
+                      var authorlist = new Authorlist( 'authorlist' );
                   });
                </script>
                """ %  (self.style(), self.scripts())
         
     def style(self):
-        return '<style type="text/css" title="SmoothnessTheme">\n%s</style>' % \
+        return '<style type="text/css" title="InspireTheme">\n%s</style>' % \
                '\n'.join([self.css(sheet) for sheet in cfg.Resources.STYLESHEETS])
         
     def css(self, css):

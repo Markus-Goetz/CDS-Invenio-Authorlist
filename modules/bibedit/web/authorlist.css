@@ -1,0 +1,34 @@
+.Authorlist {
+    font-family : 'Trebuchet MS', Helvetica, sans-serif;
+}
+
+h2.AuthorlistHeadline {
+    font-size : 16pt;
+    border-bottom : 1px solid #ffcc99;
+}
+
+label.AuthorlistLabel {
+    display : inline-block;
+    width : 20%;
+    font-weight : bold;
+    font-size : 10pt;
+}
+
+input.AuthorlistInput {
+    width : 30%;
+    margin : 5px 0px;
+}
+
+button.AuthorlistButton {
+    height : 22px;
+}
+
+button.AuthorlistAdd {
+    width : 60px;
+    margin-left : 20px;
+}
+
+button.AuthorlistRemove {
+    width : 80px;
+    margin-left : 5px;
+}
