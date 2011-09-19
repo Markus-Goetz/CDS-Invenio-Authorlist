@@ -1,5 +1,17 @@
 /*
-* Variable: SpreadSheet.CSS
+* Function: remove
+* Purpose:  Extend the array prototype to remove an element by value
+* Input(s): object:value - value to remove
+* Returns:  object:removed - the removed element if found or undefined elsewise
+*
+*/
+Array.prototype.remove = function( value ) {
+    var index = this.indexOf( value );
+    if ( index !== -1 ) return this.splice( index, 1 );
+}
+
+/*
+* Variable: Authorlist.CSS
 * Purpose:  Central enumeration and mapping for the CSS classes used in the 
 *           Authorlist module. Eases consistent look up and renaming if 
 *           required.
@@ -32,6 +44,29 @@ Authorlist.CSS = {
 }
 
 /*
+* Variable: Authorlist.EMPTY
+* Purpose:  RegEx that defines that a field is considered to be empty if it 
+*           contains only whitespaces or no characters at all.
+*
+*/
+Authorlist.EMPTY = /^\s*$/;
+
+/*
+* Variable: Authorlist.Indices
+* Purpose:  Names for the indices into the result arrays of the authors and 
+*           affiliations .fnGetData() arrays
+*
+*/
+Authorlist.INDICES = {
+    'Acronym'         : 2,
+    'Address'         : 4,
+    'AffiliationName' : 0,
+    'Affiliations'    : 6,
+    'AuthorName'      : 4,
+    'Index'           : 0
+}
+
+/*
 * Function: Authorlist
 * Purpose:  Constructor
 * Input(s): string:sId - Id of the html element the Authorlist will be embedded
@@ -48,6 +83,55 @@ function Authorlist( sId ) {
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
     this._nFootnotes = this._fnCreateFootnotes( this._nParent );
     this._nControlPanel = this._fnCreateControlPanel( this._nParent );
+}
+
+/*
+* Function: fnGetData
+* Purpose:  Returns the whole content of the authorlist tool as an objects. It 
+*           includes the values of the paper information, the author SpreadSheet
+*           as well as the ones of the affiliations sheet.
+* Input(s): void
+* Returns:  object:oResults - the content of the authorlist instance
+*
+*/
+Authorlist.prototype.fnGetData = function() {
+    var oResult = this._oPaper.fnGetData();
+    oResult.authors = this._oAuthors.fnGetData();
+    oResult.affiliations = this._oAffiliations.fnGetData();
+    
+    return oResult;
+}
+
+/*
+* Function: fnValidate
+* Purpose:  Returns a list of errors if the entered data in the author list 
+*           fields are in valid. This means it checks whether all required 
+*           fields are set as well as whether every link string is correct. If
+*           so the array with error message is empty.
+* Input(s): object:oData - the data of the authorlist as it can be obtained by 
+                           the fnGetData() call
+* Returns:  array string:asErrors - true if data is sane, else false
+*
+*/
+Authorlist.prototype.fnValidate = function( oData ) {
+    var asErrors = [];
+    
+    // Paper title
+    if ( oData.paper_title.match( Authorlist.EMPTY ) !== null ) {
+        asErrors.push( 'Paper title required' );
+    }    
+    // Collaboration name
+    if ( oData.collaboration.match( Authorlist.EMPTY ) !== null ) {
+        asErrors.push( 'Collaboration name required' );
+    }
+    
+    // Validate affiliations and authors
+    var aaoAffiliations = oData.affiliations;
+    var aaoAuthors = oData.authors;
+    var asAcronyms = this._fnValidateAffiliations( aaoAffiliations, asErrors );
+    this._fnValidateAuthors( aaoAuthors, asAcronyms, asErrors );
+    
+    return asErrors;
 }
 
 /*
@@ -150,6 +234,65 @@ Authorlist.prototype._fnCreateAuthors = function( nParent ) {
     return oAuthors;
 }
 
+/*
+* Function: _fnCreateButton
+* Purpose:  Creates a button in the given parent element with the given label 
+*           and - if set - given icon and returns the new button. The button is 
+*           a jQuery UI button widget.
+* Input(s): node:nParent - the parent element
+*           string:sLabel - the button label
+*           string:sIcon - a jQuery UI/general CSS icon class
+* Returns:  node:nButton - the button widget
+*
+*/
+Authorlist.prototype._fnCreateButton = function( nParent, sLabel, sIcon) {
+    var nButton = jQuery( '<button>' ).addClass( Authorlist.CSS.Button );
+    nParent.append( nButton );
+    
+    nButton.button( {
+        'label' : sLabel,
+        'icons' : {
+            'primary' : sIcon
+        }
+    } );
+    
+    return nButton;
+}
+
+/*
+* Function: _fnCreateControlPanel
+* Purpose:  Creates the bar in the end, containing all the control buttons, like
+*           save or export.
+* Input(s): node:nParent - the node to append the panel to
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
+    var nControlPanel = jQuery( '<div>' );
+    this._fnCreateHeadline( nControlPanel, '' );
+    
+    var nSave = this._fnCreateButton( nControlPanel, 'Save', Authorlist.CSS.SaveIcon );
+    nSave.addClass( Authorlist.CSS.Save );
+    var nAuthorsXML = this._fnCreateButton( nControlPanel, 'AuthorsXML', Authorlist.CSS.Export);
+    var nLatex = this._fnCreateButton( nControlPanel, 'LaTeX', Authorlist.CSS.Export);
+    
+    var self = this;
+    // Register safe callback
+    nSave.click( function( event ) {
+        self._fnSave();
+    } );
+    
+    // Register export callbacks
+    nAuthorsXML.click( function( event ) {
+        self._fnExport( this );
+    } );
+    nLatex.click( function( event ) {
+        self._fnExport( this );
+    } );
+    
+    nParent.append( nControlPanel );
+}
+
 
 /*
 * Function: _fnCreateFootnotes
@@ -176,41 +319,6 @@ Authorlist.prototype._fnCreateFootnotes = function( nParent ) {
     nFootnotes.append( nRequired, nLink );
     
     nParent.append( nFootnotes );
-}
-
-Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
-    var nControlPanel = jQuery( '<div>' );
-    this._fnCreateHeadline( nControlPanel, '' );
-    
-    var nSave = jQuery( '<button>' );
-    nSave.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Save );
-    var nAuthorsXML = jQuery( '<button>' );
-    nAuthorsXML.addClass( Authorlist.CSS.Button );
-    var nLatex = jQuery( '<button>' );
-    nLatex.addClass( Authorlist.CSS.Button );
-    
-    nControlPanel.append( nSave, nAuthorsXML, nLatex );
-    
-    nSave.button( {
-        'label' : 'Save',
-        'icons' : {
-            'primary' : Authorlist.CSS.SaveIcon
-        }
-    } );
-    nAuthorsXML.button( {
-        'label' : 'AuthorsXML',
-        'icons' : {
-            'primary' : Authorlist.CSS.Export
-        }
-    } );
-    nLatex.button( {
-        'label' : 'LaTeX',
-        'icons' : {
-            'primary' : Authorlist.CSS.Export
-        }
-    } );
-    
-    nParent.append( nControlPanel );
 }
 
 /*
@@ -245,6 +353,130 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
     
     return new Paper( Authorlist.CSS. Paper );
 }
+
+Authorlist.prototype._fnExport = function( nButton ) {
+    console.log( 'export', nButton );
+}
+
+Authorlist.prototype._fnSave = function() {
+    var oData = this.fnGetData();
+    var asErrors = this.fnValidate( oData );
+    
+    if ( asErrors.length === 0 ) {
+        console.log( 'saved' );
+    } else {
+        this._fnShowErrors( asErrors );
+    }
+}
+
+Authorlist.prototype._fnShowErrors = function( asErrors ) {
+    console.log( asErrors );
+}
+
+/*
+* Function: _fnValidateAffiliations
+* Purpose:  Validates a subset - namely the affiliations - of the whole data of 
+*           the fnGetData() call in fnValidate. It makes sure that all acronyms 
+*           and names/addresses of an affiliation is set. At the same time it 
+*           generates errors messages if this is not the case and appends them 
+*           to the passed error messages array.
+* Input(s): array array object:aaoAffiliations - the affiliations data entry
+            array string:asErrors - the error messages array
+* Returns:  array string:asAcronyms - an array containing the valid affiliation 
+                                      acronyms; used in _fnValidateAuthors()
+*
+*/
+Authorlist.prototype._fnValidateAffiliations = function( aaoAffiliations, asErrors ) {
+    var asAcronyms = [];
+    var asMissingAcronyms = [];
+    var asMissingAddresses = [];
+    
+    aaoAffiliations.forEach( function( aoAffiliation ) {
+        var sIndex = aoAffiliation[ Authorlist.INDICES.Index ];
+        var sAcronym = aoAffiliation[ Authorlist.INDICES.Acronym ];
+        var sAddress = aoAffiliation[ Authorlist.INDICES.Address ];
+        
+        // If acronym field is empty save it in missing acronyms, otherwise save 
+        // it in present acronyms
+        var bAcronymEmpty = sAcronym.match( Authorlist.EMPTY ) !== null;
+        if ( bAcronymEmpty ) {
+            asMissingAcronyms.push( sIndex );
+        } else {
+            asAcronyms.push( sAcronym );
+        }
+        
+        // If address field is not set remember the index
+        var bAddressEmpty = sAddress.match( Authorlist.EMPTY ) !== null;
+        if ( bAddressEmpty ) asMissingAddresses.push( sIndex );
+    } );
+    
+    // Create error messages
+    if ( asMissingAcronyms.length > 0 ) {
+        var sAcronymsError = 'Affiliations acronyms are missing in the lines ';
+        sAcronymsError += asMissingAcronyms.join( ',' );
+        asErrors.push(  sAcronymsError  );
+    }
+    
+    if ( asMissingAddresses.length > 0 ) {
+        var sAddressesError = 'Affiliation names and addresses are missing in the lines ';
+        sAddressesError += asMissingAddresses.join( ',' );
+        asErrors.push( sAddressesError  );
+    }
+    
+    // Return acronyms, which can be used later in the author validation
+    return asAcronyms;
+}
+
+/*
+* Function: _fnValidateAuthors
+* Purpose:  Validates a subset - namely the authors - of the whole data of the 
+*           fnGetData() call in fnValidate. It makes sure that all paper names 
+*           and affiliations are present to linkable. At the same time it 
+*           generates errors messages if this is not the case and appends them 
+*           to the passed error messages array.
+* Input(s): array array object:aaoAuthors - the authors data entry
+            array string:asErrors - the error messages array
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnValidateAuthors = function( aaoAuthors, asAcronyms, asErrors ) {
+    var asMissingNames = [];
+    var asUnknownAcronyms = [];
+    
+    aaoAuthors.forEach( function( aoAuthor ) {
+        var sIndex = aoAuthor[ Authorlist.INDICES.Index ];
+        var sName = aoAuthor[ Authorlist.INDICES.AuthorName ];
+        var aasAffiliations = aoAuthor[ Authorlist.INDICES.Affiliations ];
+        
+        // Name is empty? Remember the line
+        if ( sName.match( Authorlist.EMPTY ) !== null ) {
+            asMissingNames.push( sIndex );
+        }
+        
+        // An affiliation ancronym could not be found in the affiliations table?
+        aasAffiliations.forEach( function( asAffiliation ) {
+            var sAffName = asAffiliation[ Authorlist.INDICES.AffiliationName ];
+            if ( asAcronyms.indexOf( sAffName ) < 0 ) {
+                asUnknownAcronyms.push( sAffName );
+            }
+        } );
+    } );
+    
+    // If missing names are present append them to the error messages array
+    if ( asMissingNames.length > 0 ) {
+        var sNamesError = 'Author names on paper are missing in the lines ';
+        sNamesError += asMissingNames.join( ',' );
+        asErrors.push( sNamesError );
+    }
+    
+    // If unknown are acronyms were found push them in the error messages array
+    if ( asUnknownAcronyms.length > 0 ) {
+        var sAcronymsError = 'Unknown author affiliations found: ';
+        sAcronymsError += asUnknownAcronyms.join( ',' );
+        asErrors.push( sAcronymsError );
+    }
+}
+
 
 
 
@@ -292,12 +524,19 @@ Paper.prototype.fnGetData = function() {
         var sValue = jQuery( nInput ).val();
         
         // Skip empty elements
-        if ( sValue.match( /^\s*$/) !== null ) return true;
+        if ( sValue.match( Authorlist.EMPTY ) !== null ) return true;
         oResult.reference_ids.push( sValue );
     } );
     
     return oResult;
 }
+
+/*
+* Function: _fnCreateButtons
+* Purpose:  Do the same thing as authorlist does here
+*
+*/
+Paper.prototype._fnCreateButton = Authorlist.prototype._fnCreateButton
 
 /*
 * Function: _fnCreateButtons
@@ -309,27 +548,12 @@ Paper.prototype.fnGetData = function() {
 */
 Paper.prototype._fnCreateButtons = function( nParent ) {
     // Create button elements
-    var nAddButton = jQuery( '<button>' );
-    var nRemoveButton = jQuery( '<button>' );
+    var nAddButton = this._fnCreateButton( nParent, 'Add', Authorlist.CSS.AddIcon );
+    var nRemoveButton = this._fnCreateButton( nParent, 'Remove', Authorlist.CSS.RemoveIcon );
     
-    // Add classes and add them to the DOM
-    nAddButton.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Add );
-    nRemoveButton.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Remove );
-    nParent.append( nAddButton, nRemoveButton );
-    
-    // Transform them to jQuery UI buttons
-    nAddButton.button( {
-        'label' : 'Add',
-        'icons' : {
-            'primary' : Authorlist.CSS.AddIcon
-        }
-    } );
-    nRemoveButton.button( {
-        'label' : 'Remove',
-        'icons' : {
-            'primary' : Authorlist.CSS.RemoveIcon
-        }
-    } );
+    // Add classes
+    nAddButton.addClass( Authorlist.CSS.Add );
+    nRemoveButton.addClass( Authorlist.CSS.Remove );
     
     // Register callbacks for add and remove action
     var self = this;

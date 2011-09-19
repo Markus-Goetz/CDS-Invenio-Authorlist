@@ -81,7 +81,7 @@ SpreadSheet.Column = function( oInit ) {
     this.sClass = [ oInit.sType, SpreadSheet.CSS.Clickable ].join( ' ' );
     this.sTitle = typeof oInit.title === 'string' ? oInit.title : '';
     this.sType = oInit.sType;
-    this.sValue = oInit.value || '-';
+    this.sValue = oInit.value || '';
     this.sWidth = oInit.width || null;
     
     // booleans
@@ -658,6 +658,19 @@ SpreadSheet.EditColumn.prototype = new SpreadSheet.Column();
 SpreadSheet.EditColumn.prototype.constructor = SpreadSheet.EditColumn;
 
 /*
+* Function: fnIsDefault
+* Purpose:  This function will always return true when asked whether it contains
+*           a default value as an edit column. The reason for this is, that
+*           an edit column does not contain any dynamic values
+* Input(s): integer:iValue - the value of a cell as integer
+* Returns:  boolean:bDefault - always true return value
+*
+*/
+SpreadSheet.EditColumn.prototype.fnIsDefault = function( sValue ) {
+    return true;
+}
+
+/*
 * Function: fnValue
 * Purpose:  Returns the value of a cell of this column in a processable way - 
 *           meaning it returns a simple string or in case of an extendable cell 
@@ -976,7 +989,7 @@ SpreadSheet.TextSelectColumn = function( oInit ) {
     SpreadSheet.Column.call(this, oInit);
     
     // strings
-    this.sText = oInit.text || '-';
+    this.sText = oInit.text || '';
     this.sValue = typeof oInit.value !== 'undefined' ? oInit.value : '';
     this.aOptions = typeof oInit.options !== 'undefined' ? oInit.options : [];
     if ( jQuery.inArray( this.sValue, this.aOptions ) < 0 ) {
