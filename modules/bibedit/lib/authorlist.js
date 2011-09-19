@@ -9,6 +9,8 @@ Authorlist.CSS = {
     // Section classes
     'Authorlist'        : 'Authorlist',
     'Headline'          : 'AuthorlistHeadline',
+    'Footnote'          : 'AuthorlistFootnote',
+    'FootnoteSymbol'    : 'AuthorlistFootnoteSymbol',
     'Paper'             : 'AuthorlistPaper',
     'Reference'         : 'AuthorlistReference',
     'Authors'           : 'AuthorlistAuthors',
@@ -20,6 +22,9 @@ Authorlist.CSS = {
     
     // Button classes
     'Button'            : 'AuthorlistButton',
+    'Save'              : 'AuthorlistSave',
+    'SaveIcon'          : 'ui-icon-disk',
+    'Export'            : 'ui-icon-document',
     'Add'               : 'AuthorlistAdd',
     'AddIcon'           : 'ui-icon-plusthick',
     'Remove'            : 'AuthorlistRemove',
@@ -41,6 +46,8 @@ function Authorlist( sId ) {
     this._oPaper = this._fnCreatePaper( this._nParent );
     this._oAuthors = this._fnCreateAuthors( this._nParent );
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
+    this._nFootnotes = this._fnCreateFootnotes( this._nParent );
+    this._nControlPanel = this._fnCreateControlPanel( this._nParent );
 }
 
 /*
@@ -67,13 +74,13 @@ Authorlist.prototype._fnCreateAffiliations = function( nParent ) {
             'title'       : 'Edit',
             'type'        : 'edit'
         }, {
-            'title'       : 'Acronym',
-            'width'       : '5%',
+            'title'       : 'Acronym (*)',
+            'width'       : '9%',
         }, {
-            'title'       : 'Umbrella',
-            'width'       : '5%',
+            'title'       : 'Umbrella (+)',
+            'width'       : '9%',
         }, {
-            'title'       : 'Name And Address',
+            'title'       : 'Name And Address (*)',
         }, {
             'title'       : 'Domain',
             'width'       : '20%',
@@ -119,13 +126,13 @@ Authorlist.prototype._fnCreateAuthors = function( nParent ) {
         }, {
             'title'       : 'Given Name'
         }, {
-            'title'       : 'Name On Paper'
+            'title'       : 'Name On Paper (*)'
         }, {
             'title'       : 'Alive',
             'type'        : 'checkbox',
             'value'       : true
         }, {
-            'title'       : 'Affiliations',
+            'title'       : 'Affiliations (*,+)',
             'type'        : 'textselect',
             'value'       : 'Affiliated with',
             'options'     : [ 'Affiliated with', 
@@ -141,6 +148,69 @@ Authorlist.prototype._fnCreateAuthors = function( nParent ) {
     } );
     
     return oAuthors;
+}
+
+
+/*
+* Function: _fnCreateFootnotes
+* Purpose:  Creates the small footnotes below the tables
+* Input(s): node:nParent - the node to append the footnotes to
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnCreateFootnotes = function( nParent ) {
+    var nFootnotes = jQuery( '<div>' ).addClass( Authorlist.CSS.Footnote );
+
+    var nRequired       = jQuery( '<div>' );
+    var nRequiredSymbol = jQuery( '<span>(*)</span>' );
+    var nRequiredText   = jQuery( '<span>Required</span>' );
+    nRequired.append( nRequiredSymbol, nRequiredText );
+    
+    var nLink       = jQuery( '<div>' );
+    var nLinkSymbol = jQuery( '<span>(+)</span>' );
+    var nLinkText   = jQuery( '<span>Use an acronym of the affiliations table</span>' );
+    nLink.append( nLinkSymbol, nLinkText );
+    
+    nRequiredSymbol.addClass( Authorlist.CSS.FootnoteSymbol );
+    nLinkSymbol.addClass( Authorlist.CSS.FootnoteSymbol );
+    nFootnotes.append( nRequired, nLink );
+    
+    nParent.append( nFootnotes );
+}
+
+Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
+    var nControlPanel = jQuery( '<div>' );
+    this._fnCreateHeadline( nControlPanel, '' );
+    
+    var nSave = jQuery( '<button>' );
+    nSave.addClass( Authorlist.CSS.Button ).addClass( Authorlist.CSS.Save );
+    var nAuthorsXML = jQuery( '<button>' );
+    nAuthorsXML.addClass( Authorlist.CSS.Button );
+    var nLatex = jQuery( '<button>' );
+    nLatex.addClass( Authorlist.CSS.Button );
+    
+    nControlPanel.append( nSave, nAuthorsXML, nLatex );
+    
+    nSave.button( {
+        'label' : 'Save',
+        'icons' : {
+            'primary' : Authorlist.CSS.SaveIcon
+        }
+    } );
+    nAuthorsXML.button( {
+        'label' : 'AuthorsXML',
+        'icons' : {
+            'primary' : Authorlist.CSS.Export
+        }
+    } );
+    nLatex.button( {
+        'label' : 'LaTeX',
+        'icons' : {
+            'primary' : Authorlist.CSS.Export
+        }
+    } );
+    
+    nParent.append( nControlPanel );
 }
 
 /*
@@ -194,19 +264,12 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
 function Paper( sId ) {
     this._nParent = jQuery( '#' + sId );
     
-    this._nPaper = this._fnCreateInput( 'Paper Title' );
-    this._nCollaboration = this._fnCreateInput( 'Collaboration' );
-    this._nReference = this._fnCreateInput( 'Reference Ids', Authorlist.CSS.Reference + '0' );
+    this._nPaper = this._fnCreateInput( 'Paper Title (*)' );
+    this._nCollaboration = this._fnCreateInput( 'Collaboration (*)' );
+    this._nReference = this._fnCreateInput( 'Reference Id(s)', Authorlist.CSS.Reference + '0' );
     this._fnCreateButtons( this._nReference);
     
     this._nParent.append( this._nPaper, this._nCollaboration, this._nReference );
-    
-    var test = jQuery( '<div>Test</div>' );
-    test.addClass( 'ui-state-error' );
-    jQuery( 'body' ).append( test );
-    test.dialog( {
-        'modal' : true
-    } );
 }
 
 /*
