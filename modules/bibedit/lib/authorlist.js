@@ -40,7 +40,17 @@ Authorlist.CSS = {
     'Add'               : 'AuthorlistAdd',
     'AddIcon'           : 'ui-icon-plusthick',
     'Remove'            : 'AuthorlistRemove',
-    'RemoveIcon'        : 'ui-icon-minusthick'
+    'RemoveIcon'        : 'ui-icon-minusthick',
+    
+    // Dialog classes
+    'Dialog'            : 'AuthorlistDialog',
+    'Error'             : 'ui-state-error',
+    'ErrorTitle'        : 'AuthorlistErrorTitle',
+    'Icon'              : 'ui-icon',
+    'ErrorIcon'         : 'ui-icon-alert',
+    'Bullet'            : 'AuthorlistBullet',
+    'BulletIcon'        : 'ui-icon-carat-1-e',
+    'BulletText'        : 'AuthorlistBulletText'
 }
 
 /*
@@ -63,7 +73,8 @@ Authorlist.INDICES = {
     'AffiliationName' : 0,
     'Affiliations'    : 6,
     'AuthorName'      : 4,
-    'Index'           : 0
+    'Index'           : 0,
+    'Umbrella'        : 3
 }
 
 /*
@@ -118,11 +129,11 @@ Authorlist.prototype.fnValidate = function( oData ) {
     
     // Paper title
     if ( oData.paper_title.match( Authorlist.EMPTY ) !== null ) {
-        asErrors.push( 'Paper title required' );
+        asErrors.push( 'Paper title <strong>required</strong>' );
     }    
     // Collaboration name
     if ( oData.collaboration.match( Authorlist.EMPTY ) !== null ) {
-        asErrors.push( 'Collaboration name required' );
+        asErrors.push( 'Collaboration name <strong>required</strong>' );
     }
     
     // Validate affiliations and authors
@@ -130,6 +141,7 @@ Authorlist.prototype.fnValidate = function( oData ) {
     var aaoAuthors = oData.authors;
     var asAcronyms = this._fnValidateAffiliations( aaoAffiliations, asErrors );
     this._fnValidateAuthors( aaoAuthors, asAcronyms, asErrors );
+    this._fnValidateUmbrellas( aaoAffiliations, asAcronyms, asErrors );
     
     return asErrors;
 }
@@ -370,7 +382,44 @@ Authorlist.prototype._fnSave = function() {
 }
 
 Authorlist.prototype._fnShowErrors = function( asErrors ) {
-    console.log( asErrors );
+    var nDialog = jQuery( '<div>' );
+    var nError = jQuery( '<p>' );
+    var nErrorIcon = jQuery( '<span>' );
+    var nErrorText = jQuery( '<span>The following errors prevent saving:</span>' );
+    
+    // Add CSS classes
+    nDialog.addClass( Authorlist.CSS.Error );
+    nError.addClass( Authorlist.CSS.ErrorTitle );
+    nErrorIcon.addClass( Authorlist.CSS.Icon ).addClass( Authorlist.CSS.ErrorIcon );
+    nDialog.append( nError.append( nErrorIcon, nErrorText ) );
+    
+    // Create each individual message
+    asErrors.forEach( function( sError ) {
+        var nBullet = jQuery( '<p>' );
+        var nBulletIcon = jQuery( '<span>' );        
+        var nBulletText = jQuery( '<span>' + sError + '</span>' );
+        
+        nBullet.addClass( Authorlist.CSS.Bullet );
+        nBulletIcon.addClass( Authorlist.CSS.Icon );
+        nBulletIcon.addClass( Authorlist.CSS.BulletIcon );
+        nBulletText.addClass( Authorlist.CSS.BulletText );
+        
+        nDialog.append( nBullet.append( nBulletIcon, nBulletText ) );
+    } );
+    nDialog.appendTo( jQuery( 'body' ) );
+    
+    // Instantiate a jQuery UI dialog widget
+    nDialog.dialog( {
+        'modal'       : true,
+        'resizable'   : false,
+        'title'       : 'Error',
+        'width'       : '33%',
+        'maxWidth'    : '50%',
+        'dialogClass' : Authorlist.CSS.Dialog,
+        'buttons'     : {
+            'Close' : function() { jQuery( this ).remove(); }
+        }
+    } );
 }
 
 /*
@@ -381,7 +430,7 @@ Authorlist.prototype._fnShowErrors = function( asErrors ) {
 *           generates errors messages if this is not the case and appends them 
 *           to the passed error messages array.
 * Input(s): array array object:aaoAffiliations - the affiliations data entry
-            array string:asErrors - the error messages array
+*           array string:asErrors - the error messages array
 * Returns:  array string:asAcronyms - an array containing the valid affiliation 
                                       acronyms; used in _fnValidateAuthors()
 *
@@ -412,14 +461,14 @@ Authorlist.prototype._fnValidateAffiliations = function( aaoAffiliations, asErro
     
     // Create error messages
     if ( asMissingAcronyms.length > 0 ) {
-        var sAcronymsError = 'Affiliations acronyms are missing in the lines ';
-        sAcronymsError += asMissingAcronyms.join( ',' );
+        var sAcronymsError = 'Affiliations acronyms <strong>missing</strong> in lines: ';
+        sAcronymsError += '<strong>' + asMissingAcronyms.join( ',' ) + '</strong>';
         asErrors.push(  sAcronymsError  );
     }
     
     if ( asMissingAddresses.length > 0 ) {
-        var sAddressesError = 'Affiliation names and addresses are missing in the lines ';
-        sAddressesError += asMissingAddresses.join( ',' );
+        var sAddressesError = 'Affiliation names and addresses <strong>missing</strong> in lines: ';
+        sAddressesError += '<strong>' + asMissingAddresses.join( ',' ) + '</strong>';
         asErrors.push( sAddressesError  );
     }
     
@@ -431,7 +480,7 @@ Authorlist.prototype._fnValidateAffiliations = function( aaoAffiliations, asErro
 * Function: _fnValidateAuthors
 * Purpose:  Validates a subset - namely the authors - of the whole data of the 
 *           fnGetData() call in fnValidate. It makes sure that all paper names 
-*           and affiliations are present to linkable. At the same time it 
+*           and affiliations are present and linkable. At the same time it 
 *           generates errors messages if this is not the case and appends them 
 *           to the passed error messages array.
 * Input(s): array array object:aaoAuthors - the authors data entry
@@ -442,6 +491,8 @@ Authorlist.prototype._fnValidateAffiliations = function( aaoAffiliations, asErro
 Authorlist.prototype._fnValidateAuthors = function( aaoAuthors, asAcronyms, asErrors ) {
     var asMissingNames = [];
     var asUnknownAcronyms = [];
+    // Real copy of asAcronyms
+    var asUnusedAcronyms = asAcronyms.slice();
     
     aaoAuthors.forEach( function( aoAuthor ) {
         var sIndex = aoAuthor[ Authorlist.INDICES.Index ];
@@ -456,24 +507,70 @@ Authorlist.prototype._fnValidateAuthors = function( aaoAuthors, asAcronyms, asEr
         // An affiliation ancronym could not be found in the affiliations table?
         aasAffiliations.forEach( function( asAffiliation ) {
             var sAffName = asAffiliation[ Authorlist.INDICES.AffiliationName ];
-            if ( asAcronyms.indexOf( sAffName ) < 0 ) {
+            var bNotEmpty = sAffName.match( Authorlist.EMPTY ) === null;
+            if ( bNotEmpty && asAcronyms.indexOf( sAffName ) < 0 ) {
                 asUnknownAcronyms.push( sAffName );
             }
+            asUnusedAcronyms.remove( sAffName );
         } );
     } );
     
     // If missing names are present append them to the error messages array
     if ( asMissingNames.length > 0 ) {
-        var sNamesError = 'Author names on paper are missing in the lines ';
-        sNamesError += asMissingNames.join( ',' );
+        var sNamesError = 'Author paper names <strong>missing</strong> in lines ';
+        sNamesError += '<strong>' + asMissingNames.join( ',' ) + '</strong>';
         asErrors.push( sNamesError );
     }
     
     // If unknown are acronyms were found push them in the error messages array
     if ( asUnknownAcronyms.length > 0 ) {
-        var sAcronymsError = 'Unknown author affiliations found: ';
-        sAcronymsError += asUnknownAcronyms.join( ',' );
+        console.log( asUnknownAcronyms );
+        var sAcronymsError = '<strong>Unknown</strong> affiliation acronyms: ';
+        sAcronymsError += '<strong>' + asUnknownAcronyms.join( ',' ) + '</strong>';
         asErrors.push( sAcronymsError );
+    }
+    
+    // Acronyms that are unused in the affiliations table
+    if ( asUnusedAcronyms.length > 0 ) {
+        var sUnusedError = '<strong>Unused</strong> acronyms: ';
+        sUnusedError += '<strong>' + asUnusedAcronyms.join( ',' ) + '</strong>';
+        asErrors.push( sUnusedError );
+    }
+}
+
+/*
+* Function: _fnValidateUmbrellas
+* Purpose:  Validates a subset - namely the umbrella organizatons - of the whole
+*           data as retrieved by the fnGetData() call in fnValidate. It ensures 
+*           that each umbrella acronym is present in the list of all acronyms.
+*           Otherwise is generates a error message and appends it to the error 
+*           messages array. 
+* Input(s): array array object:aaoAffiliations - the affiliations data entry
+*           array string:asAcronyms - an array containing all the acronyms in 
+*                                     the affiliations table
+*           array string:asErrors - the error messages array
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnValidateUmbrellas = function( aaoAffiliations, asAcronyms, asErrors ) {
+    var asInvalidUmbrellas = [];
+
+    aaoAffiliations.forEach( function( aoAffiliation ) {
+        var sIndex = aoAffiliation[ Authorlist.INDICES.Index ];
+        var sUmbrella = aoAffiliation[ Authorlist.INDICES.Umbrella ];
+        var bNotEmpty = sUmbrella.match( Authorlist.EMPTY ) === null;
+        
+        // Umbrella string not empty and not in the acronyms? Record that!
+        if ( bNotEmpty && asAcronyms.indexOf( sUmbrella ) < 0 ) {
+            asInvalidUmbrellas.push( sIndex );
+        }
+    } );
+    
+    // Invalid umbrellas present? 
+    if ( asInvalidUmbrellas.length > 0 ) {
+        var sInvalidError = '<strong>Unknown</strong> umbrella organization in lines: ';
+        sInvalidError += '<strong>' + asInvalidUmbrellas.join( ',' ) + '</strong>';
+        asErrors.push( sInvalidError );
     }
 }
 
