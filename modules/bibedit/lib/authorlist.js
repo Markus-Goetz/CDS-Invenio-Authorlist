@@ -370,17 +370,35 @@ Authorlist.prototype._fnExport = function( nButton ) {
     console.log( 'export', nButton );
 }
 
+/*
+* Function: _fnSave
+* Purpose:  Saves the data of the authorlist instance on the server as long as 
+*           there are no errors, which will be displayed in a dialog otherwise.
+* Input(s): void
+* Returns:  void
+*
+*/
 Authorlist.prototype._fnSave = function() {
     var oData = this.fnGetData();
     var asErrors = this.fnValidate( oData );
     
+    console.log( oData, asErrors );
+    
     if ( asErrors.length === 0 ) {
-        console.log( 'saved' );
+       this._fnSend( oData );
     } else {
         this._fnShowErrors( asErrors );
     }
 }
 
+/*
+* Function: _fnShowErrors
+* Purpose:  Opens up a modal dialog box that presents all missing information/
+*           errors in the passed asErrors array in a bullet point list.
+* Input(s): array string:asErrors - the error messages array
+* Returns:  void
+*
+*/
 Authorlist.prototype._fnShowErrors = function( asErrors ) {
     var nDialog = jQuery( '<div>' );
     var nError = jQuery( '<p>' );
@@ -461,13 +479,13 @@ Authorlist.prototype._fnValidateAffiliations = function( aaoAffiliations, asErro
     
     // Create error messages
     if ( asMissingAcronyms.length > 0 ) {
-        var sAcronymsError = 'Affiliations acronyms <strong>missing</strong> in lines: ';
+        var sAcronymsError = 'Affiliation acronym <strong>missing</strong> in line(s): ';
         sAcronymsError += '<strong>' + asMissingAcronyms.join( ',' ) + '</strong>';
         asErrors.push(  sAcronymsError  );
     }
     
     if ( asMissingAddresses.length > 0 ) {
-        var sAddressesError = 'Affiliation names and addresses <strong>missing</strong> in lines: ';
+        var sAddressesError = 'Affiliation name and address <strong>missing</strong> in line(s): ';
         sAddressesError += '<strong>' + asMissingAddresses.join( ',' ) + '</strong>';
         asErrors.push( sAddressesError  );
     }
@@ -517,23 +535,22 @@ Authorlist.prototype._fnValidateAuthors = function( aaoAuthors, asAcronyms, asEr
     
     // If missing names are present append them to the error messages array
     if ( asMissingNames.length > 0 ) {
-        var sNamesError = 'Author paper names <strong>missing</strong> in lines ';
-        sNamesError += '<strong>' + asMissingNames.join( ',' ) + '</strong>';
+        var sNamesError = 'Author paper name <strong>missing</strong> in line(s) ';
+        sNamesError += '<strong>' + asMissingNames.join( ', ' ) + '</strong>';
         asErrors.push( sNamesError );
     }
     
     // If unknown are acronyms were found push them in the error messages array
     if ( asUnknownAcronyms.length > 0 ) {
-        console.log( asUnknownAcronyms );
         var sAcronymsError = '<strong>Unknown</strong> affiliation acronyms: ';
-        sAcronymsError += '<strong>' + asUnknownAcronyms.join( ',' ) + '</strong>';
+        sAcronymsError += '<strong>' + asUnknownAcronyms.join( ', ' ) + '</strong>';
         asErrors.push( sAcronymsError );
     }
     
     // Acronyms that are unused in the affiliations table
     if ( asUnusedAcronyms.length > 0 ) {
         var sUnusedError = '<strong>Unused</strong> acronyms: ';
-        sUnusedError += '<strong>' + asUnusedAcronyms.join( ',' ) + '</strong>';
+        sUnusedError += '<strong>' + asUnusedAcronyms.join( ', ' ) + '</strong>';
         asErrors.push( sUnusedError );
     }
 }
@@ -568,7 +585,7 @@ Authorlist.prototype._fnValidateUmbrellas = function( aaoAffiliations, asAcronym
     
     // Invalid umbrellas present? 
     if ( asInvalidUmbrellas.length > 0 ) {
-        var sInvalidError = '<strong>Unknown</strong> umbrella organization in lines: ';
+        var sInvalidError = '<strong>Unknown</strong> umbrella organization in line(s): ';
         sInvalidError += '<strong>' + asInvalidUmbrellas.join( ',' ) + '</strong>';
         asErrors.push( sInvalidError );
     }
