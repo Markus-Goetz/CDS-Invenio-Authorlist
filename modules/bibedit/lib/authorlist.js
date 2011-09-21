@@ -382,13 +382,15 @@ Authorlist.prototype._fnSave = function() {
     var oData = this.fnGetData();
     var asErrors = this.fnValidate( oData );
     
-    console.log( oData, asErrors );
-    
     if ( asErrors.length === 0 ) {
        this._fnSend( oData );
     } else {
         this._fnShowErrors( asErrors );
     }
+}
+
+Authorlist.prototype._fnSend = function( oData ) {
+    console.log( JSON.stringify( oData ) );
 }
 
 /*
@@ -525,8 +527,7 @@ Authorlist.prototype._fnValidateAuthors = function( aaoAuthors, asAcronyms, asEr
         // An affiliation ancronym could not be found in the affiliations table?
         aasAffiliations.forEach( function( asAffiliation ) {
             var sAffName = asAffiliation[ Authorlist.INDICES.AffiliationName ];
-            var bNotEmpty = sAffName.match( Authorlist.EMPTY ) === null;
-            if ( bNotEmpty && asAcronyms.indexOf( sAffName ) < 0 ) {
+            if ( asAcronyms.indexOf( sAffName ) < 0 ) {
                 asUnknownAcronyms.push( sAffName );
             }
             asUnusedAcronyms.remove( sAffName );
@@ -613,15 +614,17 @@ function Paper( sId ) {
     this._nPaper = this._fnCreateInput( 'Paper Title (*)' );
     this._nCollaboration = this._fnCreateInput( 'Collaboration (*)' );
     this._nReference = this._fnCreateInput( 'Reference Id(s)', Authorlist.CSS.Reference + '0' );
+    this._nExperimentNumber = this._fnCreateInput( 'Experiment Number' );
     this._fnCreateButtons( this._nReference);
     
-    this._nParent.append( this._nPaper, this._nCollaboration, this._nReference );
+    this._nParent.append( this._nPaper, this._nCollaboration, 
+                          this._nExperimentNumber, this._nReference );
 }
 
 /*
 * Function: fnGetData
 * Purpose:  Retrieves the paper information in a further processable form. EMPTY
-*           lines are SKIPPED in the result.
+*           lines in the reference ids will NOT BE in the result.
 * Input(s): void
 * Returns:  object:oResult - an object containing the paper information
 *
@@ -632,6 +635,7 @@ Paper.prototype.fnGetData = function() {
     
     oResult.paper_title = this._nPaper.find( sSelector ).val();
     oResult.collaboration = this._nCollaboration.find( sSelector ).val();
+    oResult.experiment_number = this._nExperimentNumber.find( sSelector ).val();
     oResult.reference_ids = [];
     
     this._nReference.find( sSelector ).each( function( iIndex, nInput ) {
