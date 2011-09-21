@@ -51,6 +51,7 @@ from invenio.webinterface_handler_config import HTTP_BAD_REQUEST
 import invenio.template
 authorlist_templates = invenio.template.load('authorlist')
 import invenio.authorlist_engine as authorlist_engine
+import invenio.authorlist_dblayer as authorlist_db
 
 navtrail = (' <a class="navtrail" href=\"%s/help/admin\">Admin Area</a> '
             ) % CFG_SITE_URL
@@ -220,12 +221,24 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
     def authorlist(self, req, form):
         """Handles requests for the creation, cloning and editing of author 
         lists of collaborations."""
-        argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG), 
-                                   'state': (str, 'new')})
+        argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG),
+                                   'state' : (str, '')})
         ln = argd['ln']
         _ = gettext_set_language(ln)
         
-        if argd['state'] == 'new':
+        if argd['state'] == '':
+            return page(title         = _('Author lists'),
+                        metaheaderadd = '',
+                        body          = 'Main Page And Stuff',
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+        
+        elif argd['state'] == 'new':
             return page(title         = _('Author list'),
                         metaheaderadd = authorlist_templates.metaheader(),
                         body          = authorlist_templates.body(),
@@ -237,7 +250,51 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         lastupdated   = __lastupdated__,
                         req           = req)
                         
+        elif argd['state'] == 'load':
+            return page(title         = _('Author list'),
+                        metaheaderadd = '',
+                        body          = 'Load',
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+                        
+        elif argd['state'] == 'clone':
+            return page(title         = _('Author lists'),
+                        metaheaderadd = '',
+                        body          = 'Cloning!',
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+        
+                        
+        elif argd['state'] == 'save':
+            received = wash_urlargd(form, {'id': (str, None),
+                                           'data': (str, '')})
+            paper_id = received['id']
+            data = json.loads(received['data'])
+            authorlist_db.save(paper_id, data)
+                                           
+            return page(title         = _('Author list'),
+                        metaheaderadd = '',
+                        body          = 'Saving!',
+                        errors        = [],
+                        warnings      = [],
+                        uid           = getUid(req),
+                        language      = ln,
+                        navtrail      = navtrail,
+                        lastupdated   = __lastupdated__,
+                        req           = req)
+                        
         else:
+            # Better redirect here to the main page
             return page(title       = _('Author list'),
                         body        = 'INVALID REQUEST',
                         errors      = [],

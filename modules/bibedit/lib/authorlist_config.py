@@ -20,6 +20,13 @@ class Resources:
                            'authorlist.spreadSheet.css']
 
 class JSON:
+    AFFILIATIONS_KEY     = 'affiliations'
+    AUTHORS_KEY         = 'authors'
+    COLLABORATION       = 'collaboration'
+    EXPERIMENT_NUMBER   = 'experiment_number'
+    PAPER_TITLE         = 'paper_title'
+    REFERENCE_IDS       = 'reference_ids'
+
     # Author table indices
     INDEX               = 0
     EDIT                = 1

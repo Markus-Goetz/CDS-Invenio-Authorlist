@@ -3999,54 +3999,58 @@ CREATE TABLE IF NOT EXISTS `aidCACHE` (
 
 CREATE TABLE IF NOT EXISTS `aulPAPERS` (
   `id` int(15) unsigned NOT NULL auto_increment,
-  `collaboration` varchar(255) NOT NULL,
   `title` varchar(255) NOT NULL,
+  `collaboration` varchar(255) NOT NULL,
+  `experiment_number` varchar(255) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM;
 
 CREATE TABLE IF NOT EXISTS `aulREFERENCES` (
-  `id` int(15) unsigned NOT NULL auto_increment,
+  `item` int(15) unsigned NOT NULL,
   `reference` varchar(120) NOT NULL,
-  `paper_id` int(15) unsigned NOT NULL REFERENCES `aulPAPER(id)`,
-  PRIMARY KEY (`id`),
-  INDEX (`paper_id`)
-) ENGINE=MyISAM;
-
-CREATE TABLE IF NOT EXISTS `aulAUTHORS` (
-  `id` int(15) unsigned NOT NULL auto_increment,
-  `family_name` varchar(255) NOT NULL,
-  `given_name` varchar(255) NOT NULL,
-  `suffix` varchar(60) NOT NULL,
-  `name_on_paper` varchar(255) NOT NULL,
-  `alive` varchar(10) NOT NULL,
-  `inspire_id` varchar(60) NOT NULL,
   `paper_id` int(15) unsigned NOT NULL REFERENCES `aulPAPERS(id)`,
-  PRIMARY KEY (`id`),
-  INDEX (`name_on_paper`),
-  INDEX (`paper_id`)
+  PRIMARY KEY (`item`, `paper_id`),
+  INDEX(`item`),
+  INDEX(`paper_id`)
 ) ENGINE=MyISAM;
 
 CREATE TABLE IF NOT EXISTS `aulAFFILIATIONS` (
-  `id` int(15) unsigned NOT NULL auto_increment,
-  `author_id` int(15) unsigned NOT NULL REFERENCES `aulAUTHORS(id)`,
-  `connection` varchar(30) NOT NULL,
-  `affiliation_id` int(15) unsigned NOT NULL REFERENCES `aulORGANIZATIONS(id)`,
-  PRIMARY KEY (`id`),
-  INDEX (`connection`),
-  INDEX (`author_id`),
-  INDEX (`affiliation_id`)
-) ENGINE=MyISAM;
-
-CREATE TABLE IF NOT EXISTS `aulORGANIZATIONS` (
-  `id` int(15) unsigned NOT NULL auto_increment,
+  `item` int(15) unsigned NOT NULL,
   `acronym` varchar(120) NOT NULL,
+  `umbrella` varchar(120) NOT NULL,
   `name_and_address` varchar(255) NOT NULL,
   `domain` varchar(120) NOT NULL,
-  `member` varchar(10) NOT NULL,
-  `umbrella` int(15) unsigned REFERENCES `aulORGANIZATIONSS(id)`,
-  `spires_icn` varchar(60) NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX (`acronym`),
-  INDEX (`umbrella`)
+  `member` boolean NOT NULL,
+  `spires_id` varchar(60) NOT NULL,
+  `paper_id` int(15) unsigned NOT NULL REFERENCES `aulPAPERS(id)`,
+  PRIMARY KEY (`item`, `paper_id`),
+  INDEX(`item`),
+  INDEX(`paper_id`),
+  INDEX (`acronym`)
+) ENGINE=MyISAM;
+
+CREATE TABLE IF NOT EXISTS `aulAUTHORS` (
+  `item` int(15) unsigned NOT NULL,
+  `family_name` varchar(255) NOT NULL,
+  `given_name` varchar(255) NOT NULL,
+  `name_on_paper` varchar(255) NOT NULL,
+  `alive` boolean NOT NULL,
+  `inspire_id` varchar(60) NOT NULL,
+  `paper_id` int(15) unsigned NOT NULL REFERENCES `aulPAPERS(id)`,
+  PRIMARY KEY (`item`, `paper_id`),
+  INDEX(`item`),
+  INDEX(`paper_id`)
+) ENGINE=MyISAM;
+
+CREATE TABLE IF NOT EXISTS `aulAUTHOR_AFFILIATIONS` (
+  `item` int(15) unsigned NOT NULL,
+  `affiliation_acronym` varchar(120) NOT NULL,
+  `affiliation_status` varchar(120) NOT NULL,
+  `author_item` int(15) unsigned NOT NULL,
+  `paper_id` int(15) unsigned NOT NULL REFERENCES `aulPAPERS(id)`,
+  PRIMARY KEY (`item`, `author_item`, `paper_id`),
+  INDEX(`item`),
+  INDEX(`author_item`),
+  INDEX(`paper_id`)
 ) ENGINE=MyISAM;
 -- end of file

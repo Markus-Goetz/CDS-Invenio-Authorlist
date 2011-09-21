@@ -37,6 +37,7 @@ pylib_DATA = bibrecord_config.py \
              bibeditmulti_webinterface.py \
              bibeditmulti_engine.py \
              authorlist_config.py \
+             authorlist_dblayer.py \
              authorlist_engine.py \
              authorlist_templates.py
 

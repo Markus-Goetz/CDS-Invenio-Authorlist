@@ -19,38 +19,40 @@ Array.prototype.remove = function( value ) {
 */
 Authorlist.CSS = {
     // Section classes
+    'Affiliations'      : 'AuthorlistAffiliations',
+    'Authors'           : 'AuthorlistAuthors',
     'Authorlist'        : 'Authorlist',
-    'Headline'          : 'AuthorlistHeadline',
+    'Data'              : 'AuthorlistData',
     'Footnote'          : 'AuthorlistFootnote',
     'FootnoteSymbol'    : 'AuthorlistFootnoteSymbol',
+    'Headline'          : 'AuthorlistHeadline',
     'Paper'             : 'AuthorlistPaper',
     'Reference'         : 'AuthorlistReference',
-    'Authors'           : 'AuthorlistAuthors',
-    'Affiliations'      : 'AuthorlistAffiliations',
     
     // Input classes
-    'Label'             : 'AuthorlistLabel',
     'Input'             : 'AuthorlistInput',
+    'Label'             : 'AuthorlistLabel',
     
     // Button classes
-    'Button'            : 'AuthorlistButton',
-    'Save'              : 'AuthorlistSave',
-    'SaveIcon'          : 'ui-icon-disk',
-    'Export'            : 'ui-icon-document',
     'Add'               : 'AuthorlistAdd',
     'AddIcon'           : 'ui-icon-plusthick',
+    'Button'            : 'AuthorlistButton',
+    'ButtonText'        : 'ui-button-text',
+    'Export'            : 'ui-icon-document',
     'Remove'            : 'AuthorlistRemove',
     'RemoveIcon'        : 'ui-icon-minusthick',
+    'Save'              : 'AuthorlistSave',
+    'SaveIcon'          : 'ui-icon-disk',
     
     // Dialog classes
-    'Dialog'            : 'AuthorlistDialog',
-    'Error'             : 'ui-state-error',
-    'ErrorTitle'        : 'AuthorlistErrorTitle',
-    'Icon'              : 'ui-icon',
-    'ErrorIcon'         : 'ui-icon-alert',
     'Bullet'            : 'AuthorlistBullet',
     'BulletIcon'        : 'ui-icon-carat-1-e',
-    'BulletText'        : 'AuthorlistBulletText'
+    'BulletText'        : 'AuthorlistBulletText',
+    'Dialog'            : 'AuthorlistDialog',
+    'Error'             : 'ui-state-error',
+    'ErrorIcon'         : 'ui-icon-alert',
+    'ErrorTitle'        : 'AuthorlistErrorTitle',
+    'Icon'              : 'ui-icon'
 }
 
 /*
@@ -60,6 +62,13 @@ Authorlist.CSS = {
 *
 */
 Authorlist.EMPTY = /^\s*$/;
+
+/*
+* Variable: Authorlist.ID
+* Purpose:  RegEx that parses the id URL paremeter and groups it
+*
+*/
+Authorlist.ID = /id=([^&$]+)/;
 
 /*
 * Variable: Authorlist.Indices
@@ -78,6 +87,18 @@ Authorlist.INDICES = {
 }
 
 /*
+* Variable: Authorlist.URLS
+* Purpose:  Sets up a mapping of commonly used URLS for the save and export 
+*           functionality.
+*
+*/
+Authorlist.URLS = {
+    'AuthorsXML'        : '/record/edit/authorlist?state=export&format=authorsxml',
+    'Latex'             : '/record/edit/authorlist?state=export&format=latex',
+    'Save'              : '/record/edit/authorlist?state=save'
+}
+
+/*
 * Function: Authorlist
 * Purpose:  Constructor
 * Input(s): string:sId - Id of the html element the Authorlist will be embedded
@@ -88,12 +109,19 @@ Authorlist.INDICES = {
 function Authorlist( sId ) {
     this._nParent = jQuery( '#' + sId );
     this._nParent.addClass( Authorlist.CSS.Authorlist );
+    
+    var idMatch = window.location.search.match( Authorlist.ID )
+    this._sId = idMatch === null ? null : idMatch[ 1 ];
+    
+    console.log( idMatch, this._sId );
 
     this._oPaper = this._fnCreatePaper( this._nParent );
     this._oAuthors = this._fnCreateAuthors( this._nParent );
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
     this._nFootnotes = this._fnCreateFootnotes( this._nParent );
     this._nControlPanel = this._fnCreateControlPanel( this._nParent );
+    
+    //this._nForm = this._fnCreateForm( this._nParent );
 }
 
 /*
@@ -334,10 +362,28 @@ Authorlist.prototype._fnCreateFootnotes = function( nParent ) {
 }
 
 /*
+* Function: _fnCreateForm
+* Purpose:  Creates a small hidden form to exchange data with the server
+* Input(s): node:nParent - the node where the form will be embedded into
+* Returns:  node:nForm - the form node
+*
+*/
+Authorlist.prototype._fnCreateForm = function( nParent ) {
+    var nForm = jQuery( '<form>' );
+    var nField = jQuery( '<input type="hidden">' );
+    
+    nField.attr( 'name', 'data' ).addClass( Authorlist.CSS.Data );
+    nField.appendTo( nForm );
+    nForm.appendTo( nParent );
+    
+    return nForm;
+}
+
+/*
 * Function: _fnCreateHeadline
 * Purpose:  Small helper function that will create a generic authorlist headline
 * Input(s): node:nParent - the node going to get a headline
-            string:sTitle - the title string
+*           string:sTitle - the title string
 * Returns:  node:nHeadline - the created headline node
 *
 */
@@ -366,8 +412,29 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
     return new Paper( Authorlist.CSS. Paper );
 }
 
+/*
+* Function: _fnExport
+* Purpose:  Exports the data of the authorlist instance on the server as long as 
+*           there are no errors, which will be displayed in a dialog otherwise.
+* Input(s): node:nButton - the pressed export button
+* Returns:  void
+*
+*/
 Authorlist.prototype._fnExport = function( nButton ) {
-    console.log( 'export', nButton );
+    nButton = jQuery( nButton );
+
+    var oData = this.fnGetData();
+    var asErrors = this.fnValidate( oData );
+    var sButtonText = nButton.find( '.' + Authorlist.CSS.ButtonText ).text();
+    var sURL = Authorlist.URLS[ sButtonText ];
+    
+    console.log( sURL, sButtonText );
+    
+    if ( asErrors.length === 0 ) {
+        this._fnSend( oData, sURL );
+    } else {
+        this._fnShowErrors( asErrors );
+    }
 }
 
 /*
@@ -383,14 +450,30 @@ Authorlist.prototype._fnSave = function() {
     var asErrors = this.fnValidate( oData );
     
     if ( asErrors.length === 0 ) {
-       this._fnSend( oData );
+       this._fnSend( oData, Authorlist.URLS.Save );
     } else {
         this._fnShowErrors( asErrors );
     }
 }
 
-Authorlist.prototype._fnSend = function( oData ) {
-    console.log( JSON.stringify( oData ) );
+/*
+* Function: _fnSend
+* Purpose:  Sends the given data to the passed url using an ajax request. If not
+*           specified differently, data will always be posted to the server.
+* Input(s): object:oData - the data to be sent as a JavaScript object
+*           string:sURL - the URL to send the data to
+*           string:sMethod - optional, the HTTP method how to send the data
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnSend = function( oData, sURL, sMethod ) {    
+    sURL += this._sId !== null ? '&id=' + this._sId : '';
+    
+    jQuery.ajax( {
+        'type' : 'POST',
+        'url'  : sURL,
+        'data' : { 'data' : JSON.stringify( oData ) }
+    } );
 }
 
 /*
