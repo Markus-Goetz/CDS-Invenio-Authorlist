@@ -95,7 +95,8 @@ Authorlist.INDICES = {
 Authorlist.URLS = {
     'AuthorsXML'        : '/record/edit/authorlist?state=export&format=authorsxml',
     'Latex'             : '/record/edit/authorlist?state=export&format=latex',
-    'Save'              : '/record/edit/authorlist?state=save'
+    'Save'              : '/record/edit/authorlist?state=save',
+    'Load'              : '/record/edit/authorlist?state=load'
 }
 
 /*
@@ -109,19 +110,16 @@ Authorlist.URLS = {
 function Authorlist( sId ) {
     this._nParent = jQuery( '#' + sId );
     this._nParent.addClass( Authorlist.CSS.Authorlist );
-    
-    var idMatch = window.location.search.match( Authorlist.ID )
-    this._sId = idMatch === null ? null : idMatch[ 1 ];
-    
-    console.log( idMatch, this._sId );
+
+    this._sId = this._fnGetId();
 
     this._oPaper = this._fnCreatePaper( this._nParent );
     this._oAuthors = this._fnCreateAuthors( this._nParent );
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
     this._nFootnotes = this._fnCreateFootnotes( this._nParent );
     this._nControlPanel = this._fnCreateControlPanel( this._nParent );
-    
-    //this._nForm = this._fnCreateForm( this._nParent );
+        
+    this._fnRetrieve( this._sId );
 }
 
 /*
@@ -139,6 +137,20 @@ Authorlist.prototype.fnGetData = function() {
     oResult.affiliations = this._oAffiliations.fnGetData();
     
     return oResult;
+}
+
+/*
+* Function: fnLoadData
+* Purpose:  Loads a fnGetData()-like object as the preset values.
+* Input(s): object:oData - the fnGetData()-like object
+* Returns:  void
+*
+
+*/
+Authorlist.prototype.fnLoadData = function( oData ) {    
+    this._oPaper.fnLoadData( oData );
+    this._oAuthors.fnLoadData( oData.authors );
+    this._oAffiliations.fnLoadData( oData.affiliations );
 }
 
 /*
@@ -315,22 +327,18 @@ Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
     nSave.addClass( Authorlist.CSS.Save );
     var nAuthorsXML = this._fnCreateButton( nControlPanel, 'AuthorsXML', Authorlist.CSS.Export);
     var nLatex = this._fnCreateButton( nControlPanel, 'LaTeX', Authorlist.CSS.Export);
+    nParent.append( nControlPanel );
     
     var self = this;
     // Register safe callback
     nSave.click( function( event ) {
         self._fnSave();
     } );
-    
     // Register export callbacks
-    nAuthorsXML.click( function( event ) {
+    var sSelector = '.' + Authorlist.CSS.Button;
+    jQuery( nControlPanel ).delegate( sSelector, 'click', function() {
         self._fnExport( this );
     } );
-    nLatex.click( function( event ) {
-        self._fnExport( this );
-    } );
-    
-    nParent.append( nControlPanel );
 }
 
 
@@ -428,13 +436,55 @@ Authorlist.prototype._fnExport = function( nButton ) {
     var sButtonText = nButton.find( '.' + Authorlist.CSS.ButtonText ).text();
     var sURL = Authorlist.URLS[ sButtonText ];
     
-    console.log( sURL, sButtonText );
-    
     if ( asErrors.length === 0 ) {
-        this._fnSend( oData, sURL );
+        var nForm = jQuery( '<form>' );
+        var nInput = jQuery( '<input name="data" type="hidden">' );
+        nForm.attr( 'action', sURL ).attr( 'method', 'POST' );
+        nForm.append( nInput );
+        nForm.appendTo( jQuery( 'body' ) );
+        
+        nInput.val( JSON.stringify( oData ) );
+        nForm.submit();
+        nForm.remove();
+        
     } else {
         this._fnShowErrors( asErrors );
     }
+}
+
+/*
+* Function: _fnGetId
+* Purpose:  Get the current URL id and returns it, null if not set.
+* Input(s): void
+* Returns:  string:sId - the current URL id
+*
+*/
+Authorlist.prototype._fnGetId = function() {
+    var idMatch = window.location.search.match( Authorlist.ID );
+    return idMatch === null ? null : idMatch[ 1 ];
+}
+
+/*
+* Function: _fnRetrieve
+* Purpose:  Retrieves the data of the given paper id from the server an sets 
+*           them on success as the preset values of the table or shows an error 
+*           if a failure occures.
+* Input(s): string:sId - the paper id to be loaded
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnRetrieve = function( sId ) {
+    var self = this;
+    var sURL = Authorlist.URLS.Load + ( sId !== null ? '&id=' + sId : '');
+    
+    // TODO: error
+    jQuery.ajax( {
+        'type'    : 'GET',
+        'url'     : sURL,
+        'success' : function( oData ) {
+            self.fnLoadData( oData );
+        }
+    } );
 }
 
 /*
@@ -696,8 +746,8 @@ function Paper( sId ) {
     
     this._nPaper = this._fnCreateInput( 'Paper Title (*)' );
     this._nCollaboration = this._fnCreateInput( 'Collaboration (*)' );
-    this._nReference = this._fnCreateInput( 'Reference Id(s)', Authorlist.CSS.Reference + '0' );
     this._nExperimentNumber = this._fnCreateInput( 'Experiment Number' );
+    this._nReference = this._fnCreateInput( 'Reference Id(s)', Authorlist.CSS.Reference + '0' );
     this._fnCreateButtons( this._nReference);
     
     this._nParent.append( this._nPaper, this._nCollaboration, 
@@ -730,6 +780,30 @@ Paper.prototype.fnGetData = function() {
     } );
     
     return oResult;
+}
+
+/*
+* Function: fnLoadData
+* Purpose:  Loads data from the passed object (same layout as generated in 
+*           fnGetData()) as the preset values
+* Input(s): object:oData - the fnGetData()-like load object
+* Returns:  void
+*
+*/
+Paper.prototype.fnLoadData = function( oData ) {
+    var sSelector = '.' + Authorlist.CSS.Input;
+
+    this._nPaper.find( sSelector ).val( oData.paper_title );
+    this._nCollaboration.find( sSelector ).val( oData.collaboration );
+    this._nExperimentNumber.find( sSelector ).val( oData.experiment_number );
+    
+    var nAddButton = this._nReference.find( '.' + Authorlist.CSS.Add );
+    for ( var i = 0, iLen = oData.reference_ids.length; i < iLen; i++ ) {
+        if ( i > 0 ) nAddButton.click();
+        
+        var nInput = this._nReference.find( sSelector ).eq( i );
+        nInput.val( oData.reference_ids[ i ] );
+    }
 }
 
 /*

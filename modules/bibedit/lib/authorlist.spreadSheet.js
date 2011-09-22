@@ -1299,9 +1299,6 @@ function SpreadSheet( sId, oInit ) {
     
     // Create the DataTable instance
     this._oDataTable = this._fnCreateDataTable( this._nTable, this._aoColumns );
-    
-    // Load initial data
-    this._fnLoadData( oInit );
 }
 
 /*
@@ -1464,6 +1461,45 @@ SpreadSheet.prototype.fnInsertNewLine = function( bRedraw ) {
     this._oDataTable.fnAddData( asCells, bRedraw );
     
     return asCells;
+}
+
+/*
+* Function: fnLoadData
+* Purpose:  Loads initial data for a SpreadSheet. If there is no data given, the
+*           function will create one new empty line
+* Input(s): object:oInit - SpreadSheet initializer object
+* Returns:  void
+*
+*/
+SpreadSheet.prototype.fnLoadData = function( aaoLoad ) {
+    // No initial data there to load
+    if ( typeof aaoLoad === 'undefined' || aaoLoad.length === 0 ) {
+        this.fnInsertNewLine();
+        
+    // Data found, woohoo, lets rock!
+    } else {
+        // Iterate over each line to be inserted
+        for ( var i = 0, iLen = aaoLoad.length; i < iLen; i++ ) {
+            var aoRow = aaoLoad[ i ];
+            
+            // Iterate over each individual entry in one line
+            for ( var j = 0, jLen = aoRow.length; j < jLen; j++ ) {
+                var oColumn = this._aoColumns[ j ];
+                
+                // Normally the indices should be right, but we will take the 
+                // safe track and reconstruct them
+                if ( oColumn instanceof SpreadSheet.IncrementColumn ) {
+                    aoRow[ j ] = oColumn.fnCreate( i );
+                // Elsewise we will just construct a normal cell using the data
+                } else {
+                    aoRow[ j ] = oColumn.fnCreate( aoRow[ j ] );
+                }
+            }
+        }
+        
+        // Add the whole data to the DataTables instance
+        this._oDataTable.fnAddData( aaoLoad );
+    }
 }
 
 /*
@@ -1700,47 +1736,6 @@ SpreadSheet.prototype._fnGetInitialSorting = function( aoColumns ) {
         }
     }
     return [[ 0, 'asc' ]];
-}
-
-/*
-* Function: _fnLoadData
-* Purpose:  Loads initial data for a SpreadSheet. If there is no data given, the
-*           function will create one new empty line
-* Input(s): object:oInit - SpreadSheet initializer object
-* Returns:  void
-*
-*/
-SpreadSheet.prototype._fnLoadData = function( oInit ) {
-    var aaoLoad = oInit.load;
-
-    // No initial data there to load
-    if ( typeof aaoLoad === 'undefined' || aaoLoad.length === 0 ) {
-        this.fnInsertNewLine();
-        
-    // Data found, woohoo, lets rock!
-    } else {
-        // Iterate over each line to be inserted
-        for ( var i = 0, iLen = aaoLoad.length; i < iLen; i++ ) {
-            var aoRow = aaoLoad[ i ];
-            
-            // Iterate over each individual entry in one line
-            for ( var j = 0, jLen = aoRow.length; j < jLen; j++ ) {
-                var oColumn = this._aoColumns[ j ];
-                
-                // Normally the indices should be right, but we will take the 
-                // safe track and reconstruct them
-                if ( oColumn instanceof SpreadSheet.IncrementColumn ) {
-                    aoRow[ j ] = oColumn.fnCreate( i );
-                // Elsewise we will just construct a normal cell using the data
-                } else {
-                    aoRow[ j ] = oColumn.fnCreate( aoRow[ j ] );
-                }
-            }
-        }
-        
-        // Add the whole data to the DataTables instance
-        this._oDataTable.fnAddData( aaoLoad );
-    }
 }
 
 /*

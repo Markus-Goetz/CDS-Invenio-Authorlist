@@ -224,9 +224,11 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG),
                                    'state' : (str, '')})
         ln = argd['ln']
+        state = argd['state']
         _ = gettext_set_language(ln)
         
-        if argd['state'] == '':
+        if state == '':
+            # TODO
             return page(title         = _('Author lists'),
                         metaheaderadd = '',
                         body          = 'Main Page And Stuff',
@@ -238,7 +240,7 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         lastupdated   = __lastupdated__,
                         req           = req)
         
-        elif argd['state'] == 'new':
+        elif state == 'open':
             return page(title         = _('Author list'),
                         metaheaderadd = authorlist_templates.metaheader(),
                         body          = authorlist_templates.body(),
@@ -250,51 +252,44 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         lastupdated   = __lastupdated__,
                         req           = req)
                         
-        elif argd['state'] == 'load':
-            return page(title         = _('Author list'),
-                        metaheaderadd = '',
-                        body          = 'Load',
-                        errors        = [],
-                        warnings      = [],
-                        uid           = getUid(req),
-                        language      = ln,
-                        navtrail      = navtrail,
-                        lastupdated   = __lastupdated__,
-                        req           = req)
-                        
-        elif argd['state'] == 'clone':
-            return page(title         = _('Author lists'),
-                        metaheaderadd = '',
-                        body          = 'Cloning!',
-                        errors        = [],
-                        warnings      = [],
-                        uid           = getUid(req),
-                        language      = ln,
-                        navtrail      = navtrail,
-                        lastupdated   = __lastupdated__,
-                        req           = req)
-        
-                        
-        elif argd['state'] == 'save':
+        elif state == 'load':
+            received = wash_urlargd(form, {'id': (str, None)})
+            paper_id = received['id']
+            data = authorlist_db.load(paper_id)
+            
+            req.content_type = 'application/json'
+            req.write(json.dumps(data))
+            
+        elif state == 'save':
             received = wash_urlargd(form, {'id': (str, None),
                                            'data': (str, '')})
             paper_id = received['id']
             data = json.loads(received['data'])
             authorlist_db.save(paper_id, data)
-                                           
-            return page(title         = _('Author list'),
-                        metaheaderadd = '',
-                        body          = 'Saving!',
-                        errors        = [],
-                        warnings      = [],
-                        uid           = getUid(req),
-                        language      = ln,
-                        navtrail      = navtrail,
-                        lastupdated   = __lastupdated__,
-                        req           = req)
                         
+        elif state == 'clone':
+            received = wash_urlargd(form, {'id': (str, None)})
+            paper_id = received['id']
+            data = authorlist_db.clone(paper_id)
+            
+            req.content_type = 'application/json'
+            req.write(json.dumps(data))
+            
+        elif state == 'export':
+            received = wash_urlargd(form, {'format': (str, None),
+                                           'data': (str, '')})
+            format = received['format']
+            data = received['data']            
+            converter = authorlist_engine.Converters.get(format)
+            
+            # TODO: check here for converter != None and write error if not
+                          
+            req.headers_out['Content-Type'] = converter.CONTENT_TYPE
+            req.headers_out['Content-Disposition'] = 'attachement; filename="%s"' % converter.FILE_NAME
+            req.write(authorlist_engine.dumps(data, converter))
+            
         else:
-            # Better redirect here to the main page
+            # TODO: Better redirect here to the main page
             return page(title       = _('Author list'),
                         body        = 'INVALID REQUEST',
                         errors      = [],

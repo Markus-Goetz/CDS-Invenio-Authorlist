@@ -63,22 +63,23 @@ class AuthorsXML(Converter):
         affiliation_acronym = parsed[cfg.JSON.AFFILIATION_ACRONYM]
         affiliation_status = parsed[cfg.JSON.AFFILIATION_STATUS]
         
-        affiliation.setAttribute('organizationid', ids[affiliation_acronym])
-        affiliation.setAttrubute('connection', affiliations_status)
+        affiliation.setAttribute('organizationid', 
+                                 organization_ids[affiliation_acronym])
+        affiliation.setAttribute('connection', affiliation_status)
         
         return affiliation
         
     def create_authors(self, document, root, parsed, organization_ids):
-        parsed_authors = parsed.authors
+        parsed_authors = parsed[cfg.JSON.AUTHORS_KEY]
     
         authors = document.createElement('cal:authors')
         root.appendChild(authors)
         
         for parsed_author in parsed_authors:
             author = self.create_author(document, parsed_author, organization_ids)
-            authors.append(author)
+            authors.appendChild(author)
         
-    def create_author(self, document, parsed, organizations_ids):
+    def create_author(self, document, parsed, organization_ids):
         author = document.createElement('foaf:Person')
         
         # paper name
@@ -131,10 +132,10 @@ class AuthorsXML(Converter):
             author.appendChild(author_ids)
             
             author_id = document.createElement('cal:authorid')
-            author_id.setAttribute('source', cfg.AuthorsXML.INSIRE)
+            author_id.setAttribute('source', cfg.AuthorsXML.INSPIRE)
             author_id_text = document.createTextNode(author_id_info)
             author_id.appendChild(author_id_text)
-            authors_ids.appendChild(author_id)
+            author_ids.appendChild(author_id)
         
         return author
         
@@ -147,27 +148,28 @@ class AuthorsXML(Converter):
         
         # name
         name = document.createElement('foaf:name')
-        name_info = parsed.collaboration
+        name_info = parsed[cfg.JSON.COLLABORATION]
         name_text = document.createTextNode(name_info)
         name.appendChild(name_text)
         collaboration.appendChild(name)
         
         # experiment number
-        experiment_number_info = parsed.experiment_number
+        experiment_number_info = parsed[cfg.JSON.EXPERIMENT_NUMBER]
         if (cfg.EMPTY.match(experiment_number_info) is not None): return
         experiment_number = document.createElement('cal:experimentNumber')
         experiment_number_text = document.createTextNode(experiment_number_info)
-        experiment.appendChild(experiment_number_text)
+        experiment_number.appendChild(experiment_number_text)
         root.appendChild(experiment_number)
         
     def create_document(self):
         dom = getDOMImplementation()
         document = dom.createDocument(None, 'collaborationauthorlist', None)
+        root = document.documentElement
         
-        document.setAttribute('xmlns:foaf', 'http://xmlns.com/foaf/0.1/')
-        document.setAttribute('xmlns:cal', 'http://www.slac.stanford.edu/spires/hepnames/authors_xml/')
+        root.setAttribute('xmlns:foaf', 'http://xmlns.com/foaf/0.1/')
+        root.setAttribute('xmlns:cal', 'http://www.slac.stanford.edu/spires/hepnames/authors_xml/')
         
-        return document, documentElement
+        return document, root
         
     def create_header(self, document, root, parsed):
         # creation date
@@ -178,14 +180,14 @@ class AuthorsXML(Converter):
         root.appendChild(creation_date)
         
         # publication reference
-        for reference_info in parsed.reference_ids:
+        for reference_info in parsed[cfg.JSON.REFERENCE_IDS]:
             reference = document.createElement('cal:publicationReference')
             reference_text = document.createTextNode(reference_info)
             reference.appendChild(reference_text)
             root.appendChild(reference)
         
     def create_organizations(self, document, root, parsed, ids):
-        parsed_organizations = parsed.affiliations
+        parsed_organizations = parsed[cfg.JSON.AFFILIATIONS_KEY]
         
         # organizations container
         organizations = document.createElement('cal:organizations')
@@ -203,7 +205,7 @@ class AuthorsXML(Converter):
         
         # create the domain node if field is set
         domain_info = parsed[cfg.JSON.DOMAIN]
-        if (cfg.EMPTY.match(domain) is None):
+        if (cfg.EMPTY.match(domain_info) is None):
             domain = document.createElement('cal:orgDomain')
             domain_text = document.createTextNode(domain_info)
             domain.appendChild(domain_text)
@@ -214,7 +216,7 @@ class AuthorsXML(Converter):
         name_info = parsed[cfg.JSON.NAME]
         name_text = document.createTextNode(name_info)
         name.appendChild(name_text)
-        organizaton.appendChild(name)
+        organization.appendChild(name)
         
         # inspire id
         org_name_info = parsed[cfg.JSON.SPIRES_ID]
@@ -248,13 +250,16 @@ class AuthorsXML(Converter):
     def dump(self, data):
         parsed = json.loads(data)
         document, root = self.create_document()
+        affiliations = parsed[cfg.JSON.AFFILIATIONS_KEY]
         
-        organization_ids = self.generate_organization_ids(parsed.affiliations)
+        organization_ids = self.generate_organization_ids(affiliations)
         
         self.create_header(document, root, parsed)
         self.create_collaboration(document, root, parsed)
         self.create_organizations(document, root, parsed, organization_ids)
         self.create_authors(document, root, parsed, organization_ids)
+        
+        return document
         
     def dumps(self, data):
         return self.dump(data).toprettyxml(indent = '    ', encoding = 'utf-8')
@@ -269,11 +274,11 @@ class AuthorsXML(Converter):
         return ids
         
 class Converters:
-    __converters__ = {}
+    __converters__ = {'authorsxml' : AuthorsXML}
     
     @classmethod
-    def get(cls, mode):
-        return None
+    def get(cls, format):
+        return cls.__converters__.get(format)
       
 def dump(data, converter):
     return converter().dump(data)
