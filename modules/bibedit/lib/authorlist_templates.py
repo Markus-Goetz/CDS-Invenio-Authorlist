@@ -33,29 +33,40 @@ class Template:
         """Initialize."""
         pass
         
-    def metaheader(self):
-        return """
-               %s
-               %s
-               <script>
-               jQuery( document).ready( function() {   
-                      var authorlist = new Authorlist( 'authorlist' );
-                  });
-               </script>
-               """ %  (self.style(), self.scripts())
-        
-    def style(self):
-        return '<style type="text/css" title="InspireTheme">\n%s</style>' % \
-               '\n'.join([self.css(sheet) for sheet in cfg.Resources.STYLESHEETS])
+    def body(self):
+        return '<div id="authorlist"></div>'
         
     def css(self, css):
         return '@import "%s/img/%s";' % (CFG_SITE_URL, css)
         
-    def scripts(self):
-        return '\n'.join([self.javascript(script) for script in cfg.Resources.SCRIPTS])
-        
+    def index_header(self):
+        return """
+               %s
+               %s
+               <script>
+                   jQuery( document ).ready( function() {
+                        var authorindex = new AuthorlistIndex( 'authorlist' );
+                   } );
+               </script>
+               """ %  (self.stylesheets(), self.scripts())
+    
     def javascript(self, js):
         return '<script type="text/javascript" src="%s/js/%s"></script>' % (CFG_SITE_URL, js)
         
-    def body(self):
-        return '<div id="authorlist"></div>'
+    def list_header(self):
+        return """
+               %s
+               %s
+               <script>
+                  jQuery( document ).ready( function() {   
+                      var authorlist = new Authorlist( 'authorlist' );
+                  } );
+               </script>
+               """ %  (self.stylesheets(), self.scripts())
+    
+    def scripts(self):
+        return '\n'.join([self.javascript(script) for script in cfg.Resources.SCRIPTS])
+        
+    def stylesheets(self):
+        return '<style type="text/css" title="InspireTheme">\n%s</style>' % \
+               '\n'.join([self.css(sheet) for sheet in cfg.Resources.STYLESHEETS])

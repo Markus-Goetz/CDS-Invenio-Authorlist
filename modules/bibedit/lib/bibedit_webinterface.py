@@ -221,17 +221,20 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
     def authorlist(self, req, form):
         """Handles requests for the creation, cloning and editing of author 
         lists of collaborations."""
-        argd = wash_urlargd(form, {'ln': (str, CFG_SITE_LANG),
+        argd = wash_urlargd(form, {'ln' : (str, CFG_SITE_LANG),
                                    'state' : (str, '')})
         ln = argd['ln']
         state = argd['state']
         _ = gettext_set_language(ln)
         
+        # no state parameter set? load the main page
         if state == '':
-            # TODO
-            return page(title         = _('Author lists'),
-                        metaheaderadd = '',
-                        body          = 'Main Page And Stuff',
+            foo = authorlist_templates.index_header()
+            bar = authorlist_templates.body()
+        
+            return page(title         = _('Author Manager'),
+                        metaheaderadd = authorlist_templates.index_header(),
+                        body          = authorlist_templates.body(),
                         errors        = [],
                         warnings      = [],
                         uid           = getUid(req),
@@ -239,10 +242,19 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         navtrail      = navtrail,
                         lastupdated   = __lastupdated__,
                         req           = req)
+            
+            
+        elif state == 'itemize':
+            data = authorlist_db.itemize()
         
+            req.content_type = 'application/json'
+            req.write(json.dumps(data))
+            
+                
+        # open paremeter set? initialize a Authorlist instance
         elif state == 'open':
-            return page(title         = _('Author list'),
-                        metaheaderadd = authorlist_templates.metaheader(),
+            return page(title         = _('Author Manager'),
+                        metaheaderadd = authorlist_templates.list_header(),
                         body          = authorlist_templates.body(),
                         errors        = [],
                         warnings      = [],
@@ -252,53 +264,80 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                         lastupdated   = __lastupdated__,
                         req           = req)
                         
+        # On load state we will answer with the JSON encoded data of the passed 
+        # paper id. Should usually not be directly surfed by the user.
         elif state == 'load':
-            received = wash_urlargd(form, {'id': (str, None)})
-            paper_id = received['id']
-            data = authorlist_db.load(paper_id)
-            
-            req.content_type = 'application/json'
-            req.write(json.dumps(data))
-            
+            try:
+                received = wash_urlargd(form, {'id': (str, None)})
+                paper_id = received['id']
+                data = authorlist_db.load(paper_id)
+                
+                req.content_type = 'application/json'
+                req.write(json.dumps(data))
+            except:
+                # redirect to the main page if weird stuff happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
+        
+        # The save state saves the send data in the database using the passed 
+        # paper id. Responds with a JSON object containing the id of the paper 
+        # as saved in the database. Should usually not be surfed directly by the
+        # user
         elif state == 'save':
-            received = wash_urlargd(form, {'id': (str, None),
-                                           'data': (str, '')})
-            paper_id = received['id']
-            data = json.loads(received['data'])
-            authorlist_db.save(paper_id, data)
-                        
+            try:
+                received = wash_urlargd(form, {'id': (str, None),
+                                               'data': (str, '')})
+                paper_id = received['id']
+                in_data = json.loads(received['data'])
+                out_data = authorlist_db.save(paper_id, in_data)
+                
+                req.content_type = 'application/json'
+                req.write(json.dumps(out_data))
+            except:
+                # redirect to the main page if something weird happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
+        
+        # Clones the paper with the given id in the database and responds with a
+        # JSON object containing the id of the clone. Should usually not surfed 
+        # directly by the user.
         elif state == 'clone':
-            received = wash_urlargd(form, {'id': (str, None)})
-            paper_id = received['id']
-            data = authorlist_db.clone(paper_id)
-            
-            req.content_type = 'application/json'
-            req.write(json.dumps(data))
-            
+            try:
+                received = wash_urlargd(form, {'id': (str, None)})
+                paper_id = received['id']
+                data = authorlist_db.clone(paper_id)
+                
+                req.content_type = 'application/json'
+                req.write(json.dumps(data))
+            except:
+                # redirect to the main page if something weird happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
+        
+        # Transform the sent data into the format passed in the URL using a 
+        # authorlist_engine converter. Reponds with the MIME type of the 
+        # converter and offers it as a download (content-disposition header).    
         elif state == 'export':
-            received = wash_urlargd(form, {'format': (str, None),
-                                           'data': (str, '')})
-            format = received['format']
-            data = received['data']            
-            converter = authorlist_engine.Converters.get(format)
-            
-            # TODO: check here for converter != None and write error if not
-                          
-            req.headers_out['Content-Type'] = converter.CONTENT_TYPE
-            req.headers_out['Content-Disposition'] = 'attachement; filename="%s"' % converter.FILE_NAME
-            req.write(authorlist_engine.dumps(data, converter))
-            
+            try:
+                received = wash_urlargd(form, {'format': (str, None),
+                                               'data': (str, '')})
+                format = received['format']
+                data = received['data']            
+                converter = authorlist_engine.Converters.get(format)
+                
+                attachement = 'attachement; filename="%s"' % converter.FILE_NAME
+                req.headers_out['Content-Type'] = converter.CONTENT_TYPE
+                req.headers_out['Content-Disposition'] = attachement
+                req.write(authorlist_engine.dumps(data, converter))
+            except:
+                # redirect to the main page if something weird happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
+        
+        # No state given, just go to the main page.    
         else:
-            # TODO: Better redirect here to the main page
-            return page(title       = _('Author list'),
-                        body        = 'INVALID REQUEST',
-                        errors      = [],
-                        warnings    = [],
-                        uid         = getUid(req),
-                        language    = ln,
-                        navtrail    = navtrail,
-                        lastupdated = __lastupdated__,
-                        req         = req)
+            redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                            CFG_SITE_RECORD))
                     
 
     def __call__(self, req, form):

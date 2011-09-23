@@ -4002,6 +4002,7 @@ CREATE TABLE IF NOT EXISTS `aulPAPERS` (
   `title` varchar(255) NOT NULL,
   `collaboration` varchar(255) NOT NULL,
   `experiment_number` varchar(255) NOT NULL,
+  `last_modified` int unsigned NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM;
 

@@ -83,3 +83,68 @@ span.AuthorlistBulletText {
     display : block;
     padding : 0px 20px;
 }
+
+div.AuthorlistIndexPaper {
+    margin-bottom : 10px;
+    padding-bottom : 10px;
+    border-bottom : 1px solid #FFCC99;
+}
+
+a.AuthorlistIndexPaperTitle {
+    display : inline-block;
+    color : #6699CC;
+    margin-bottom : 3px;
+}
+
+a.AuthorlistIndexPaperTitle:hover {
+    background-color : transparent;
+}
+
+span.AuthorlistIndexTimestamp {
+    display : block;
+    float : right;
+    text-align : right;
+    font-weight : bold;
+    font-size : 8pt;
+}
+
+span.AuthorlistIndexURL {
+    display : inline-block;
+    color : #CC9966;
+    font-size : 8pt;
+    margin : 3px 0px;
+}
+
+span.AuthorlistIndexDetailLabel {
+    display : inline-block;
+    font-weight : bold;
+    margin-right : 5px;
+    font-size : 10pt;
+}
+
+span.AuthorlistIndexDetail {
+    font-size : 10pt;
+}
+
+a.AuthorlistIndexEditLink {
+    display : inline-block;
+    color : #6699CC;
+    font-size : 8pt;
+    text-decoration : underline;
+    margin-left : 5px;
+}
+
+a.AuthorlistIndexEditLink:hover {
+    cursor : pointer;
+    background-color : transparent;
+}
+
+span.AuthorlistIndexSeperator {
+    position : relative;
+    display : inline-block;
+    top : -2px;
+    width : 3px;
+    height : 3px;
+    background-color : #6699CC;
+    margin-left : 5px;
+}

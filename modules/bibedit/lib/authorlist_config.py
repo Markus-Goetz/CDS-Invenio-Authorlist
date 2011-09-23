@@ -20,10 +20,12 @@ class Resources:
                            'authorlist.spreadSheet.css']
 
 class JSON:
-    AFFILIATIONS_KEY     = 'affiliations'
+    AFFILIATIONS_KEY    = 'affiliations'
     AUTHORS_KEY         = 'authors'
     COLLABORATION       = 'collaboration'
     EXPERIMENT_NUMBER   = 'experiment_number'
+    PAPER_ID            = 'paper_id'
+    LAST_MODIFIED       = 'last_modified'
     PAPER_TITLE         = 'paper_title'
     REFERENCE_IDS       = 'reference_ids'
 

@@ -52,7 +52,19 @@ Authorlist.CSS = {
     'Error'             : 'ui-state-error',
     'ErrorIcon'         : 'ui-icon-alert',
     'ErrorTitle'        : 'AuthorlistErrorTitle',
-    'Icon'              : 'ui-icon'
+    'Icon'              : 'ui-icon',
+    
+    // Authorlist Index classes
+    'AuthorlistIndex'   : 'AuthorlistIndex',
+    'Detail'            : 'AuthorlistIndexDetail',
+    'DetailLabel'       : 'AuthorlistIndexDetailLabel',
+    'EditLink'          : 'AuthorlistIndexEditLink',
+    'Link'              : 'AuthorlistIndexLink',
+    'Paper'             : 'AuthorlistIndexPaper',
+    'PaperTitle'        : 'AuthorlistIndexPaperTitle',
+    'Seperator'         : 'AuthorlistIndexSeperator',
+    'Timestamp'         : 'AuthorlistIndexTimestamp',
+    'URL'               : 'AuthorlistIndexURL'
 }
 
 /*
@@ -94,10 +106,210 @@ Authorlist.INDICES = {
 */
 Authorlist.URLS = {
     'AuthorsXML'        : '/record/edit/authorlist?state=export&format=authorsxml',
+    'Clone'             : '/record/edit/authorlist?state=clone',
+    'Delete'            : '/record/edit/authorlist?state=delete',
+    'Itemize'           : '/record/edit/authorlist?state=itemize',
     'Latex'             : '/record/edit/authorlist?state=export&format=latex',
-    'Save'              : '/record/edit/authorlist?state=save',
-    'Load'              : '/record/edit/authorlist?state=load'
+    'Load'              : '/record/edit/authorlist?state=load',
+    'Open'              : '/record/edit/authorlist?state=open',
+    'Save'              : '/record/edit/authorlist?state=save'
 }
+
+/*
+* Variable: Authorlist.TO_MILLIS
+* Purpose:  Factor to convert seconds timestamp to milliseconds
+*
+*/
+Authorlist.TO_MILLIS = 1000;
+
+
+
+
+
+
+
+
+/*
+* Function: AuthorlistIndex
+* Purpose:  Constructor
+* Input(s): string:sId - Id of the html element the AuthorlistIndex will be 
+*                        embedded into (preferably a div).
+* Returns:  AuthorlistIndex instance when called with new, else undefined
+*
+*/
+function AuthorlistIndex( sId ) {
+    this._nParent = jQuery( '#' + sId );
+    this._nParent.addClass( Authorlist.CSS.AuthorlistIndex );
+    
+    this._fnRetrieve();   
+}
+
+/*
+* Function: _fnCreatePaper
+* Purpose:  Creates a single paper record node based on the data passed in the 
+*           oPaper object. 
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+*/
+AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
+    var nClone = jQuery( '<a>' );
+    nClone.html( 'Clone' );
+    nClone.addClass( Authorlist.CSS.EditLink );
+    nClone.click( function( event ) {
+        jQuery.ajax( {
+            'type'    : 'POST',
+            'url'     : Authorlist.URLS.Clone + '&id=' + sId,
+            'success' : function( oData ) {
+                var sURL = Authorlist.URLS.Open + '&id=' + oData.paper_id;
+                window.location.href = sURL;
+            }
+        } );
+        return false;
+    } );
+    
+    var nSeperator = jQuery( '<span>' );
+    nSeperator.addClass( Authorlist.CSS.Seperator );
+    
+    var nDelete = jQuery( '<a>' );
+    nDelete.html( 'Delete' );
+    nDelete.addClass( Authorlist.CSS.EditLink );
+    nDelete.click( function() {
+        jQuery.ajax( {
+            'type'    : 'POST',
+            'url'     : Authorlist.CSS.Delete + '&id=' + sId,
+            'success' : function() {
+                location.reload();
+            }
+        } );
+        return false;
+    } );
+    
+    nParent.append( nClone, nSeperator, nDelete );
+}
+
+/*
+* Function: _fnCreatePaper
+* Purpose:  Creates a single paper record node based on the data passed in the 
+*           oPaper object. 
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+*/
+AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
+    var nPaper = jQuery( '<div>' ).addClass( Authorlist.CSS.Paper );
+    var sURL = Authorlist.URLS.Open + '&id=' + oPaper.paper_id;
+    var oTime = new Date( oPaper.last_modified * Authorlist.TO_MILLIS );
+    var sTime = oTime.toLocaleDateString() + ' ' + oTime.toLocaleTimeString();
+    
+    // create the link
+    var nLink = jQuery( '<a>' );
+    nLink.attr( 'href', sURL );
+    nLink.html( oPaper.paper_title );
+    nLink.addClass( Authorlist.CSS.PaperTitle );
+    
+    // create the time stamp
+    var nTimestamp = jQuery( '<span>' );
+    nTimestamp.html( 'Last Modified: ' + sTime );
+    nTimestamp.addClass( Authorlist.CSS.Timestamp );
+    
+    // create link label
+    var nURL = jQuery( '<span>' )
+    nURL.html( sURL );
+    nURL.addClass( Authorlist.CSS.URL );
+    
+    // add the information
+    nPaper.append( nLink, nTimestamp );
+    
+    // present collaboration/experiment number only if present
+    if ( oPaper.collaboration ) {
+        var sLabel = 'Collaboration:';
+        var sCollaboration = oPaper.collaboration
+        nPaper.append( this._fnCreatePaperDetail( sLabel, sCollaboration ) );
+    }
+    if ( oPaper.experiment_number ) {
+        var sLabel = 'Experiment Number:';
+        var sExperiment = oPaper.experiment_number;
+        nPaper.append( this._fnCreatePaperDetail( sLabel, sExperiment ) );
+    }
+    
+    // add the link as last item
+    nPaper.append( nURL );
+    this._fnCreateEditLinks( nPaper, oPaper.paper_id );
+    
+    return nPaper;
+}
+
+/*
+* Function: _fnCreatePaperDetail
+* Purpose:  Creates a paper detail consisting of a label as defined in the 
+*           string sLabel with the values sDetail
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+*/
+AuthorlistIndex.prototype._fnCreatePaperDetail = function( sLabel, sDetail ) {
+    var nWrapper = jQuery( '<div>' );
+    var nLabel = jQuery( '<span>' ).html( sLabel );
+    var nDetail = jQuery( '<span>' ).html( sDetail );
+    
+    nLabel.addClass( Authorlist.CSS.DetailLabel );
+    nDetail.addClass( Authorlist.CSS.Detail );
+    nWrapper.append( nLabel, nDetail );
+    
+    return nWrapper;
+}
+
+/*
+* Function: _fnDisplay
+* Purpose:  Displays each of the passed papers in the oData object on the 
+*           nParent element.
+* Input(s): object:oData - the object containing all papers
+*           node:nParent - the element to display the papers on
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnDisplay = function( oData, nParent ) {
+    var oPapers = oData.data;
+    var nPapers = jQuery( '<div>' );
+    
+    for ( var i = 0, iLen = oPapers.length; i < iLen; i++ ) {
+        var nPaper = this._fnCreatePaper( oPapers[ i ] );
+        nPapers.append( nPaper );
+    }
+    nPapers.appendTo( nParent );
+}
+
+/*
+* Function: _fnRetrieve
+* Purpose:  Retrieves all available papers from the database and displays them 
+*           nicely on the webpage on success.
+* Input(s): void
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnRetrieve = function() {
+    var self = this;
+
+    jQuery.ajax( {
+        'type'    : 'GET',
+        'url'     : Authorlist.URLS.Itemize,
+        'success' : function( oData ) {
+            self._fnDisplay( oData, self._nParent );
+        }
+    } );
+}
+
+
+
+
+
+
+
+
 
 /*
 * Function: Authorlist
@@ -335,7 +547,7 @@ Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
         self._fnSave();
     } );
     // Register export callbacks
-    var sSelector = '.' + Authorlist.CSS.Button;
+    var sSelector = 'button:not(.' + Authorlist.CSS.Save + ')'
     jQuery( nControlPanel ).delegate( sSelector, 'click', function() {
         self._fnExport( this );
     } );
@@ -498,32 +710,26 @@ Authorlist.prototype._fnRetrieve = function( sId ) {
 Authorlist.prototype._fnSave = function() {
     var oData = this.fnGetData();
     var asErrors = this.fnValidate( oData );
+    var self = this;
     
     if ( asErrors.length === 0 ) {
-       this._fnSend( oData, Authorlist.URLS.Save );
+        sURL = Authorlist.URLS.Save;
+        // Append the id of this sheet to the save URL if present
+        sURL += this._sId !== null ? '&id=' + this._sId : '';
+        
+        // Post the data to the server and save the new id on success
+        jQuery.ajax( {
+            'type' : 'POST',
+            'url'  : sURL,
+            'data' : { 'data' : JSON.stringify( oData ) },
+            'success' : function( oData ) {
+                self._sId = oData.paper_id;
+            }
+        } );
+    // Errors present? Better display them an do not save
     } else {
         this._fnShowErrors( asErrors );
     }
-}
-
-/*
-* Function: _fnSend
-* Purpose:  Sends the given data to the passed url using an ajax request. If not
-*           specified differently, data will always be posted to the server.
-* Input(s): object:oData - the data to be sent as a JavaScript object
-*           string:sURL - the URL to send the data to
-*           string:sMethod - optional, the HTTP method how to send the data
-* Returns:  void
-*
-*/
-Authorlist.prototype._fnSend = function( oData, sURL, sMethod ) {    
-    sURL += this._sId !== null ? '&id=' + this._sId : '';
-    
-    jQuery.ajax( {
-        'type' : 'POST',
-        'url'  : sURL,
-        'data' : { 'data' : JSON.stringify( oData ) }
-    } );
 }
 
 /*
