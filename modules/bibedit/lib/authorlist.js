@@ -154,6 +154,8 @@ function AuthorlistIndex( sId ) {
 *
 */
 AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
+    var self = this;
+
     var nClone = jQuery( '<a>' );
     nClone.html( 'Clone' );
     nClone.addClass( Authorlist.CSS.EditLink );
@@ -162,8 +164,8 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
             'type'    : 'POST',
             'url'     : Authorlist.URLS.Clone + '&id=' + sId,
             'success' : function( oData ) {
-                var sURL = Authorlist.URLS.Open + '&id=' + oData.paper_id;
-                window.location.href = sURL;
+                console.log( oData );
+                nParent.parent().prepend( self._fnCreatePaper( oData ) );
             }
         } );
         return false;
@@ -178,9 +180,9 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
     nDelete.click( function() {
         jQuery.ajax( {
             'type'    : 'POST',
-            'url'     : Authorlist.CSS.Delete + '&id=' + sId,
+            'url'     : Authorlist.URLS.Delete + '&id=' + sId,
             'success' : function() {
-                location.reload();
+                nParent.remove();
             }
         } );
         return false;
@@ -359,7 +361,7 @@ Authorlist.prototype.fnGetData = function() {
 *
 
 */
-Authorlist.prototype.fnLoadData = function( oData ) {    
+Authorlist.prototype.fnLoadData = function( oData ) {
     this._oPaper.fnLoadData( oData );
     this._oAuthors.fnLoadData( oData.authors );
     this._oAffiliations.fnLoadData( oData.affiliations );

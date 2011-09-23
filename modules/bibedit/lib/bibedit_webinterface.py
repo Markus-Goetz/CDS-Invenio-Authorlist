@@ -302,17 +302,12 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         # JSON object containing the id of the clone. Should usually not surfed 
         # directly by the user.
         elif state == 'clone':
-            try:
-                received = wash_urlargd(form, {'id': (str, None)})
-                paper_id = received['id']
-                data = authorlist_db.clone(paper_id)
-                
-                req.content_type = 'application/json'
-                req.write(json.dumps(data))
-            except:
-                # redirect to the main page if something weird happens
-                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
-                                                               CFG_SITE_RECORD))
+            received = wash_urlargd(form, {'id': (str, None)})
+            paper_id = received['id']
+            data = authorlist_db.clone(paper_id)
+            
+            req.content_type = 'application/json'
+            req.write(json.dumps(data))
         
         # Transform the sent data into the format passed in the URL using a 
         # authorlist_engine converter. Reponds with the MIME type of the 
@@ -333,7 +328,18 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
                 # redirect to the main page if something weird happens
                 redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
                                                                CFG_SITE_RECORD))
-        
+                                                               
+        elif state == 'delete':
+            try:
+                received = wash_urlargd(form, {'id': (str, None)})
+                paper_id = received['id']
+                
+                authorlist_db.delete(paper_id)
+            except:
+                # redirect to the main page if something weird happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
+                                                               
         # No state given, just go to the main page.    
         else:
             redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 

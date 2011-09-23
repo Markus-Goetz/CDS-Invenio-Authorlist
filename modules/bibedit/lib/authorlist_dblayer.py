@@ -11,25 +11,25 @@ def now():
 
 def clone(paper_id):
     """
-    Clones a whole paper data having the given id and returns the id of the 
-    clone. The new id is returned in a dictionary as the value of the key 
-    paper_id. If the paper_id was a falsy value (None usually) or the id of the 
-    paper to be cloned does not exist the passed id will be returned instead and
-    not data entry is cloned.
+    Clones a whole paper data having the given id and returns the paper 
+    information of the clone as a dictionary. If the paper_id was a falsy value 
+    (None usually) or the id of the paper to be cloned does not exist in the 
+    database. The function will create a new empty record, save it and return it
+    instead.
     """
-    data = {}    
+    data = {}
     clone_id = clone_paper(paper_id)
     
-    if (clone_id is None):
-        # TODO: error message here
-        data[cfg.JSON.PAPER_ID] = paper_id
-        return data
+    if (clone_id == 0):
+        data = load(None)
+        clone_id = save(None, data)
     else:
-        data[cfg.JSON.PAPER_ID] = clone_id
-        
-    clone_references(paper_id, clone_id)
-    clone_affiliations(paper_id, clone_id)
-    clone_authors(paper_id, clone_id)
+        clone_references(paper_id, clone_id)
+        clone_affiliations(paper_id, clone_id)
+        clone_authors(paper_id, clone_id)
+    
+    load_paper(clone_id, data)
+    data[cfg.JSON.PAPER_ID] = clone_id
     
     return data
     
@@ -38,20 +38,14 @@ def clone_paper(paper_id):
     Clones the general paper information - i.e. title, collaboration and 
     experiment number. Furthermore, the last modified timestamp will be set 
     to the current time. All of this is only done, if the requested paper id 
-    was found in the database, otherwise None is returned. This function 
+    was found in the database, otherwise 0 is returned. This function 
     should NOT be called alone as long as you are really sure that you want 
     to do this. Refer to clone() instead.
     """
-    clone_id = run_sql("""SELECT id FROM aulPAPERS WHERE id = %s""", (paper_id,))
-    # id not found in db? return None, clone() will handle this
-    if (not clone_id): return None
-    
-    clone_id = run_sql("""INSERT INTO aulPAPERS (id, title, collaboration, 
-                          experiment_number, last_modified) SELECT %s, title, 
-                          collaboration, experiment_number, %s FROM aulPAPERS 
-                          WHERE id = %s;""", (None, now(), paper_id,))
-                          
-    return clone_id
+    return run_sql("""INSERT INTO aulPAPERS (id, title, collaboration, 
+                      experiment_number, last_modified) SELECT %s, title, 
+                      collaboration, experiment_number, %s FROM aulPAPERS 
+                      WHERE id = %s;""", (None, now(), paper_id,))
                           
 def clone_references(paper_id, clone_id):
     """
@@ -108,6 +102,75 @@ def clone_author_affiliations(paper_id, clone_id):
                author_item, %s FROM aulAUTHOR_AFFILIATIONS 
                WHERE paper_id = %s;""", (clone_id, paper_id,))
     return clone_id
+    
+def delete(paper_id):
+    """
+    Deletes the paper with the given id completely from the database. There is 
+    no backup copy so better we sure that you want to do this :). Returns the 
+    id of the deleted paper again for convenience reasons.
+    """
+    data = {cfg.JSON.PAPER_ID : paper_id}
+    
+    delete_paper(paper_id)
+    delete_references(paper_id)
+    delete_affiliations(paper_id)
+    delete_authors(paper_id)
+    delete_author_affiliations(paper_id)    
+    
+    return data
+    
+def delete_paper(paper_id):
+    """
+    Deletes the general informations of a paper without making any backup copy 
+    and safety net for the paper with the given id. Should NOT be used alone 
+    unless you are sure that you want to do this. Refer to delete() instead. 
+    Returns the paper_id for convenience reasons.
+    """
+    run_sql("""DELETE FROM aulPAPERS WHERE id = %s;""", (paper_id,))
+    return paper_id
+    
+def delete_references(paper_id):
+    """
+    Deletes the paper references from the database with the given id. It does 
+    not create any backup copy. Should NOT be used unless you are really sure 
+    that you want to do this. Refer to delete() instead. Returns the paper_id 
+    for convenience reasons.
+    """
+    run_sql("""DELETE FROM aulREFERENCES WHERE paper_id = %s;""", (paper_id,))
+    return paper_id
+    
+def delete_affiliations(paper_id):
+    """
+    Deletes the affiliations of the paper with the given paper id completely 
+    from the database. There is no safety net or backup copy. Should NOT be used
+    alone unless you are sure that you want to do this. Refer to delete() 
+    instead. Returns the paper id for convenience reasons.
+    """
+    run_sql("""DELETE FROM aulAFFILIATIONS WHERE paper_id = %s;""", (paper_id,))
+    return paper_id
+    
+def delete_authors(paper_id):
+    """
+    Deletes the authors of the paper with the given id completely from the 
+    database. There is no backup copy or safety net, make sure you want to do 
+    this. This function should NOT be used alone unless you know what you are 
+    doing. Refer to delete() instead. Returns the paper id for convenience 
+    reasons.
+    """
+    run_sql("""DELETE FROM aulAUTHORS WHERE paper_id = %s;""", (paper_id,))
+    return paper_id
+    
+def delete_author_affiliations(paper_id):
+    """
+    Deletes the affiliations of each author that is part of the paper of the 
+    passed id. There is no backup copy or safety net, so make sure you want to 
+    call this function. This function should NOT be called alone unless you know
+    what you are doing. Refer to delete() instead. Returns the paper id for 
+    convenience reasons.
+    """
+    run_sql("""DELETE FROM aulAUTHOR_AFFILIATIONS 
+               WHERE paper_id = %s;""", (paper_id,))
+    return paper_id
                
 def itemize():
     """
@@ -231,8 +294,8 @@ def load_author_affiliations(paper_id, author_id):
     """
     Loads the affiliations of the author with the passed id that is part of the 
     author lists of the paper with the given id. Should NOT be used alone as 
-    long as you are not sure what you are doing. Refer to load() instead. The 
-    paper id is returned for convenience reasons
+    long as you are not sure what you are doing. Refer to load() instead. In 
+    this case the paper id is NOT returned but the author affiliations.
     """
     result = run_sql("""SELECT affiliation_acronym, affiliation_status 
                         FROM aulAUTHOR_AFFILIATIONS WHERE author_item = %s 
@@ -243,7 +306,7 @@ def load_author_affiliations(paper_id, author_id):
         acronym, status = author_affiliation
         author_affiliations.append([acronym, status])
         
-    return paper_id
+    return author_affiliations
 
 def save(paper_id, in_data):
     """
