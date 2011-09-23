@@ -1,89 +1,7 @@
-.Authorlist {
-    font-family : Helvetica, Arial, sans-serif;
-}
-
-h2.AuthorlistHeadline {
-    font-size : 16pt;
-    border-bottom : 1px solid #ffcc99;
-}
-
-label.AuthorlistLabel {
-    display : inline-block;
-    width : 20%;
-    font-weight : bold;
-    font-size : 10pt;
-}
-
-input.AuthorlistInput {
-    width : 30%;
-    margin : 5px 0px;
-}
-
-button.AuthorlistButton {
-    height : 22px;
-    margin-left : 5px;
-}
-
-button.AuthorlistAdd {
-    margin-left : 20px;
-}
-
-button.AuthorlistSave {
-    margin-left : 0px;
-    margin-right : 30px;
-}
-
-div.AuthorlistFootnote {
-    font-size : 8pt;
-    font-weight : bold;
-}
-
-span.AuthorlistFootnoteSymbol {
-    display : inline-block;
-    width : 20px;
-}
-
-div.AuthorlistDialog {
-    font-size : 10pt !important;
-}
-
-div.AuthorlistDialog div.ui-dialog-content {
-    margin-bottom : 13px;
-}
-
-div.AuthorlistDialog div.ui-dialog-buttonpane {
-    padding : 5px 1em 3px 0px !important;
-    margin : 0px !important;
-}
-
-div.AuthorlistDialog button {
-    font-size : 8pt !important;
-    padding : 0px !important;
-    margin : 0px !important;
-}
-
-div.AuthorlistDialog .ui-icon {
-    float : left;
-}
-
-span.ui-icon.ui-icon-alert {
-    margin-right : 5px;
-}
-
-p.AuthorlistErrorTitle {
-    font-weight : bold;
-    margin-bottom : 13px;
-}
-
-p.AuthorlistBullet {
-    margin : 5px 0px;
-}
-
-span.AuthorlistBulletText {
-    display : block;
-    padding : 0px 20px;
-}
-
+/*
+* AuthorlistIndex definitions
+*
+*/
 div.AuthorlistIndexPaper {
     margin-bottom : 10px;
     padding-bottom : 10px;
@@ -147,4 +65,105 @@ span.AuthorlistIndexSeperator {
     height : 3px;
     background-color : #6699CC;
     margin-left : 5px;
+}
+
+/*
+* Authorlist definitions
+*
+*/
+.Authorlist {
+    font-family : Helvetica, Arial, sans-serif;
+}
+
+#AuthorlistPaper {
+    margin-top : 50px;
+}
+
+h2.AuthorlistHeadline {
+    font-size : 16pt;
+    border-bottom : 1px solid #ffcc99;
+}
+
+div.AuthorlistFootnote {
+    font-size : 8pt;
+    font-weight : bold;
+}
+
+span.AuthorlistFootnoteSymbol {
+    display : inline-block;
+    width : 20px;
+}
+
+/* Input field definitions */
+label.AuthorlistLabel {
+    display : inline-block;
+    width : 20%;
+    font-weight : bold;
+    font-size : 10pt;
+}
+
+input.AuthorlistInput {
+    width : 30%;
+    margin : 5px 0px;
+}
+
+/* Buttons definitions */
+button.AuthorlistButton {
+    height : 22px;
+    margin-left : 5px;
+}
+
+button.AuthorlistBack {
+    margin-left : 0px;
+    margin-right : 30px;
+}
+
+button.AuthorlistDelete {
+    margin-right : 30px;
+}
+
+button.AuthorlistAdd {
+    margin-left : 20px;
+}
+
+/* Dialog definitions */
+div.AuthorlistDialog {
+    font-size : 10pt !important;
+}
+
+div.AuthorlistDialog div.ui-dialog-content {
+    margin-bottom : 13px;
+}
+
+div.AuthorlistDialog div.ui-dialog-buttonpane {
+    padding : 5px 1em 3px 0px !important;
+    margin : 0px !important;
+}
+
+div.AuthorlistDialog button {
+    font-size : 8pt !important;
+    padding : 0px !important;
+    margin : 0px !important;
+}
+
+div.AuthorlistDialog .ui-icon {
+    float : left;
+}
+
+span.ui-icon.ui-icon-alert {
+    margin-right : 5px;
+}
+
+p.AuthorlistErrorTitle {
+    font-weight : bold;
+    margin-bottom : 13px;
+}
+
+p.AuthorlistBullet {
+    margin : 5px 0px;
+}
+
+span.AuthorlistBulletText {
+    display : block;
+    padding : 0px 20px;
 }

@@ -302,12 +302,17 @@ class WebInterfaceEditPages(WebInterfaceDirectory):
         # JSON object containing the id of the clone. Should usually not surfed 
         # directly by the user.
         elif state == 'clone':
-            received = wash_urlargd(form, {'id': (str, None)})
-            paper_id = received['id']
-            data = authorlist_db.clone(paper_id)
-            
-            req.content_type = 'application/json'
-            req.write(json.dumps(data))
+            try:
+                received = wash_urlargd(form, {'id': (str, None)})
+                paper_id = received['id']
+                data = authorlist_db.clone(paper_id)
+                
+                req.content_type = 'application/json'
+                req.write(json.dumps(data))
+            except:
+                # redirect to the main page if something weird happens
+                redirect_to_url(req, '%s/%s/edit/authorlist' % (CFG_SITE_URL, 
+                                                               CFG_SITE_RECORD))
         
         # Transform the sent data into the format passed in the URL using a 
         # authorlist_engine converter. Reponds with the MIME type of the 

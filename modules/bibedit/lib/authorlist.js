@@ -10,51 +10,29 @@ Array.prototype.remove = function( value ) {
     if ( index !== -1 ) return this.splice( index, 1 );
 }
 
+
+
+
+
+
+
+
+
 /*
-* Variable: Authorlist.CSS
-* Purpose:  Central enumeration and mapping for the CSS classes used in the 
-*           Authorlist module. Eases consistent look up and renaming if 
-*           required.
+* Variable: AuthorlistIndex.TO_MILLIS
+* Purpose:  Factor to convert seconds timestamp to milliseconds
 *
 */
-Authorlist.CSS = {
-    // Section classes
-    'Affiliations'      : 'AuthorlistAffiliations',
-    'Authors'           : 'AuthorlistAuthors',
-    'Authorlist'        : 'Authorlist',
-    'Data'              : 'AuthorlistData',
-    'Footnote'          : 'AuthorlistFootnote',
-    'FootnoteSymbol'    : 'AuthorlistFootnoteSymbol',
-    'Headline'          : 'AuthorlistHeadline',
-    'Paper'             : 'AuthorlistPaper',
-    'Reference'         : 'AuthorlistReference',
-    
-    // Input classes
-    'Input'             : 'AuthorlistInput',
-    'Label'             : 'AuthorlistLabel',
-    
-    // Button classes
-    'Add'               : 'AuthorlistAdd',
-    'AddIcon'           : 'ui-icon-plusthick',
-    'Button'            : 'AuthorlistButton',
-    'ButtonText'        : 'ui-button-text',
-    'Export'            : 'ui-icon-document',
-    'Remove'            : 'AuthorlistRemove',
-    'RemoveIcon'        : 'ui-icon-minusthick',
-    'Save'              : 'AuthorlistSave',
-    'SaveIcon'          : 'ui-icon-disk',
-    
-    // Dialog classes
-    'Bullet'            : 'AuthorlistBullet',
-    'BulletIcon'        : 'ui-icon-carat-1-e',
-    'BulletText'        : 'AuthorlistBulletText',
-    'Dialog'            : 'AuthorlistDialog',
-    'Error'             : 'ui-state-error',
-    'ErrorIcon'         : 'ui-icon-alert',
-    'ErrorTitle'        : 'AuthorlistErrorTitle',
-    'Icon'              : 'ui-icon',
-    
-    // Authorlist Index classes
+AuthorlistIndex.TO_MILLIS = 1000;
+
+/*
+* Variable: AuthorlistIndex.CSS
+* Purpose:  Central enumeration and mapping for the CSS classes used in the 
+*           AuthorlistIndex prototype. Eases consistent look up and renaming if 
+*           required.
+*
+*/  
+AuthorlistIndex.CSS = {
     'AuthorlistIndex'   : 'AuthorlistIndex',
     'Detail'            : 'AuthorlistIndexDetail',
     'DetailLabel'       : 'AuthorlistIndexDetailLabel',
@@ -67,60 +45,6 @@ Authorlist.CSS = {
     'URL'               : 'AuthorlistIndexURL'
 }
 
-/*
-* Variable: Authorlist.EMPTY
-* Purpose:  RegEx that defines that a field is considered to be empty if it 
-*           contains only whitespaces or no characters at all.
-*
-*/
-Authorlist.EMPTY = /^\s*$/;
-
-/*
-* Variable: Authorlist.ID
-* Purpose:  RegEx that parses the id URL paremeter and groups it
-*
-*/
-Authorlist.ID = /id=([^&$]+)/;
-
-/*
-* Variable: Authorlist.Indices
-* Purpose:  Names for the indices into the result arrays of the authors and 
-*           affiliations .fnGetData() arrays
-*
-*/
-Authorlist.INDICES = {
-    'Acronym'         : 2,
-    'Address'         : 4,
-    'AffiliationName' : 0,
-    'Affiliations'    : 6,
-    'AuthorName'      : 4,
-    'Index'           : 0,
-    'Umbrella'        : 3
-}
-
-/*
-* Variable: Authorlist.URLS
-* Purpose:  Sets up a mapping of commonly used URLS for the save and export 
-*           functionality.
-*
-*/
-Authorlist.URLS = {
-    'AuthorsXML'        : '/record/edit/authorlist?state=export&format=authorsxml',
-    'Clone'             : '/record/edit/authorlist?state=clone',
-    'Delete'            : '/record/edit/authorlist?state=delete',
-    'Itemize'           : '/record/edit/authorlist?state=itemize',
-    'Latex'             : '/record/edit/authorlist?state=export&format=latex',
-    'Load'              : '/record/edit/authorlist?state=load',
-    'Open'              : '/record/edit/authorlist?state=open',
-    'Save'              : '/record/edit/authorlist?state=save'
-}
-
-/*
-* Variable: Authorlist.TO_MILLIS
-* Purpose:  Factor to convert seconds timestamp to milliseconds
-*
-*/
-Authorlist.TO_MILLIS = 1000;
 
 
 
@@ -139,7 +63,7 @@ Authorlist.TO_MILLIS = 1000;
 */
 function AuthorlistIndex( sId ) {
     this._nParent = jQuery( '#' + sId );
-    this._nParent.addClass( Authorlist.CSS.AuthorlistIndex );
+    this._nParent.addClass( AuthorlistIndex.CSS.AuthorlistIndex );
     
     this._fnRetrieve();   
 }
@@ -158,7 +82,7 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
 
     var nClone = jQuery( '<a>' );
     nClone.html( 'Clone' );
-    nClone.addClass( Authorlist.CSS.EditLink );
+    nClone.addClass( AuthorlistIndex.CSS.EditLink );
     nClone.click( function( event ) {
         jQuery.ajax( {
             'type'    : 'POST',
@@ -172,11 +96,11 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
     } );
     
     var nSeperator = jQuery( '<span>' );
-    nSeperator.addClass( Authorlist.CSS.Seperator );
+    nSeperator.addClass( AuthorlistIndex.CSS.Seperator );
     
     var nDelete = jQuery( '<a>' );
     nDelete.html( 'Delete' );
-    nDelete.addClass( Authorlist.CSS.EditLink );
+    nDelete.addClass( AuthorlistIndex.CSS.EditLink );
     nDelete.click( function() {
         jQuery.ajax( {
             'type'    : 'POST',
@@ -201,26 +125,26 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
 *
 */
 AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
-    var nPaper = jQuery( '<div>' ).addClass( Authorlist.CSS.Paper );
+    var nPaper = jQuery( '<div>' ).addClass( AuthorlistIndex.CSS.Paper );
     var sURL = Authorlist.URLS.Open + '&id=' + oPaper.paper_id;
-    var oTime = new Date( oPaper.last_modified * Authorlist.TO_MILLIS );
+    var oTime = new Date( oPaper.last_modified * AuthorlistIndex.TO_MILLIS );
     var sTime = oTime.toLocaleDateString() + ' ' + oTime.toLocaleTimeString();
     
     // create the link
     var nLink = jQuery( '<a>' );
     nLink.attr( 'href', sURL );
     nLink.html( oPaper.paper_title );
-    nLink.addClass( Authorlist.CSS.PaperTitle );
+    nLink.addClass( AuthorlistIndex.CSS.PaperTitle );
     
     // create the time stamp
     var nTimestamp = jQuery( '<span>' );
     nTimestamp.html( 'Last Modified: ' + sTime );
-    nTimestamp.addClass( Authorlist.CSS.Timestamp );
+    nTimestamp.addClass( AuthorlistIndex.CSS.Timestamp );
     
     // create link label
     var nURL = jQuery( '<span>' )
     nURL.html( sURL );
-    nURL.addClass( Authorlist.CSS.URL );
+    nURL.addClass( AuthorlistIndex.CSS.URL );
     
     // add the information
     nPaper.append( nLink, nTimestamp );
@@ -258,8 +182,8 @@ AuthorlistIndex.prototype._fnCreatePaperDetail = function( sLabel, sDetail ) {
     var nLabel = jQuery( '<span>' ).html( sLabel );
     var nDetail = jQuery( '<span>' ).html( sDetail );
     
-    nLabel.addClass( Authorlist.CSS.DetailLabel );
-    nDetail.addClass( Authorlist.CSS.Detail );
+    nLabel.addClass( AuthorlistIndex.CSS.DetailLabel );
+    nDetail.addClass( AuthorlistIndex.CSS.Detail );
     nWrapper.append( nLabel, nDetail );
     
     return nWrapper;
@@ -314,6 +238,114 @@ AuthorlistIndex.prototype._fnRetrieve = function() {
 
 
 /*
+* Variable: Authorlist.CSS
+* Purpose:  Central enumeration and mapping for the CSS classes used in the 
+*           Authorlist prototype. Eases consistent look up and renaming if 
+*           required.
+*
+*/
+Authorlist.CSS = {
+    // Section classes
+    'Affiliations'      : 'AuthorlistAffiliations',
+    'Authors'           : 'AuthorlistAuthors',
+    'Authorlist'        : 'Authorlist',
+    'Data'              : 'AuthorlistData',
+    'Footnote'          : 'AuthorlistFootnote',
+    'FootnoteSymbol'    : 'AuthorlistFootnoteSymbol',
+    'Headline'          : 'AuthorlistHeadline',
+    'Menu'              : 'AuthorlistMenu',
+    'Paper'             : 'AuthorlistPaper',
+    'Reference'         : 'AuthorlistReference',
+    
+    // Input classes
+    'Input'             : 'AuthorlistInput',
+    'Label'             : 'AuthorlistLabel',
+    
+    // Button classes
+    'Add'               : 'AuthorlistAdd',
+    'AddIcon'           : 'ui-icon-plusthick',
+    'Back'              : 'AuthorlistBack',
+    'BackIcon'          : 'ui-icon-arrowreturnthick-1-w',
+    'Button'            : 'AuthorlistButton',
+    'ButtonText'        : 'ui-button-text',
+    'Delete'            : 'AuthorlistDelete',
+    'DeleteIcon'        : 'ui-icon-trash',
+    'Export'            : 'AuthorlistExport',
+    'ExportIcon'        : 'ui-icon-document',
+    'Remove'            : 'AuthorlistRemove',
+    'RemoveIcon'        : 'ui-icon-minusthick',
+    'Save'              : 'AuthorlistSave',
+    'SaveIcon'          : 'ui-icon-disk',
+    
+    // Dialog classes
+    'Bullet'            : 'AuthorlistBullet',
+    'BulletIcon'        : 'ui-icon-carat-1-e',
+    'BulletText'        : 'AuthorlistBulletText',
+    'Dialog'            : 'AuthorlistDialog',
+    'Error'             : 'ui-state-error',
+    'ErrorIcon'         : 'ui-icon-alert',
+    'ErrorTitle'        : 'AuthorlistErrorTitle',
+    'Icon'              : 'ui-icon'
+}
+
+/*
+* Variable: Authorlist.EMPTY
+* Purpose:  RegEx that defines that a field is considered to be empty if it 
+*           contains only whitespaces or no characters at all.
+*
+*/
+Authorlist.EMPTY = /^\s*$/;
+
+/*
+* Variable: Authorlist.ID
+* Purpose:  RegEx that parses the id URL paremeter and groups it
+*
+*/
+Authorlist.ID = /id=([^&$]+)/;
+
+/*
+* Variable: Authorlist.Indices
+* Purpose:  Names for the indices into the result arrays of the authors and 
+*           affiliations .fnGetData() arrays
+*
+*/
+Authorlist.INDICES = {
+    'Acronym'         : 2,
+    'Address'         : 4,
+    'AffiliationName' : 0,
+    'Affiliations'    : 6,
+    'AuthorName'      : 4,
+    'Index'           : 0,
+    'Umbrella'        : 3
+}
+
+/*
+* Variable: Authorlist.URLS
+* Purpose:  Sets up a mapping of commonly used URLS for the save and export 
+*           functionality.
+*
+*/
+Authorlist.URLS = {
+    'AuthorsXML'        : '/record/edit/authorlist?state=export&format=authorsxml',
+    'Clone'             : '/record/edit/authorlist?state=clone',
+    'Delete'            : '/record/edit/authorlist?state=delete',
+    'Itemize'           : '/record/edit/authorlist?state=itemize',
+    'Latex'             : '/record/edit/authorlist?state=export&format=latex',
+    'Load'              : '/record/edit/authorlist?state=load',
+    'MainPage'          : '/record/edit/authorlist',
+    'Open'              : '/record/edit/authorlist?state=open',
+    'Save'              : '/record/edit/authorlist?state=save'
+}
+
+
+
+
+
+
+
+
+
+/*
 * Function: Authorlist
 * Purpose:  Constructor
 * Input(s): string:sId - Id of the html element the Authorlist will be embedded
@@ -331,7 +363,8 @@ function Authorlist( sId ) {
     this._oAuthors = this._fnCreateAuthors( this._nParent );
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
     this._nFootnotes = this._fnCreateFootnotes( this._nParent );
-    this._nControlPanel = this._fnCreateControlPanel( this._nParent );
+    this._nMenu = this._fnCreateMenu( this._nParent );
+    //this._nControlPanel = this._fnCreateControlPanel( this._nParent );
         
     this._fnRetrieve( this._sId );
 }
@@ -398,6 +431,10 @@ Authorlist.prototype.fnValidate = function( oData ) {
     this._fnValidateUmbrellas( aaoAffiliations, asAcronyms, asErrors );
     
     return asErrors;
+}
+
+Authorlist.prototype._fnBackToMainPage = function() {
+        window.location.href = Authorlist.URLS.MainPage;
 }
 
 /*
@@ -618,6 +655,58 @@ Authorlist.prototype._fnCreateHeadline = function( nParent, sTitle ) {
 }
 
 /*
+* Function: _fnCreateMenu
+* Purpose:  Creates a new headline for the menu, creates the buttons and embeds 
+*           it into the parent and returns the created node.
+* Input(s): node:nParent - where to append the paper information to
+* Returns:  node:nMenu - the menu node
+*
+*/
+Authorlist.prototype._fnCreateMenu = function( nParent ) {
+    var self = this;
+    
+    // Create menu container
+    var nMenu = jQuery( '<div>' );
+    nMenu.attr( 'id', Authorlist.CSS.Menu );
+    nParent.append( nMenu );
+    
+    this._fnCreateHeadline( nMenu, '' );
+    
+    // Create buttons
+    var nBackButton = this._fnCreateButton( nMenu, 'All Papers', Authorlist.CSS.BackIcon );
+    var nSave = this._fnCreateButton( nMenu, 'Save', Authorlist.CSS.SaveIcon );
+    var nDeleteButton = this._fnCreateButton( nMenu, 'Delete', Authorlist.CSS.DeleteIcon );
+    var nAuthorsXML = this._fnCreateButton( nMenu, 'AuthorsXML', Authorlist.CSS.ExportIcon );
+    var nLatex = this._fnCreateButton( nMenu, 'LaTeX', Authorlist.CSS.ExportIcon );
+    
+    // Add classes   
+    nBackButton.addClass( Authorlist.CSS.Back );
+    nSave.addClass( Authorlist.CSS.Save );
+    nDeleteButton.addClass( Authorlist.CSS.Delete );
+    nAuthorsXML.addClass( Authorlist.CSS.Export );
+    nLatex.addClass( Authorlist.CSS.Export );
+    
+    // Register callbacks for the buttons
+    nBackButton.click( function() {
+        self._fnBackToMainPage();
+    } );
+        
+    nSave.click( function( event ) {
+        self._fnSave();
+    } );  
+      
+    nDeleteButton.click( function() {
+        self._fnDelete();
+    } );
+    
+    jQuery( nMenu ).delegate( '.' + Authorlist.CSS.Export, 'click', function() {
+        self._fnExport( this );
+    } );
+    
+    return nMenu;
+}
+
+/*
 * Function: _fnCreatePaper
 * Purpose:  Creates a new headline for the paper information, creates a Paper 
 *           objects, embeds it into the parent and returns it.
@@ -632,6 +721,18 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
     nParent.append( nPaper );
     
     return new Paper( Authorlist.CSS. Paper );
+}
+
+Authorlist.prototype._fnDelete = function() {
+    var self = this;
+    
+    jQuery.ajax( {
+        'type'    : 'POST',
+        'url'     : Authorlist.URLS.Delete + '&id=' + self._sId,
+        'success' : function() {
+            self._fnBackToMainPage();
+        }
+    } );
 }
 
 /*
