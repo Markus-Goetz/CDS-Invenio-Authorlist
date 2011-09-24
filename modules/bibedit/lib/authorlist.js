@@ -19,225 +19,6 @@ Array.prototype.remove = function( value ) {
 
 
 /*
-* Variable: AuthorlistIndex.TO_MILLIS
-* Purpose:  Factor to convert seconds timestamp to milliseconds
-*
-*/
-AuthorlistIndex.TO_MILLIS = 1000;
-
-/*
-* Variable: AuthorlistIndex.CSS
-* Purpose:  Central enumeration and mapping for the CSS classes used in the 
-*           AuthorlistIndex prototype. Eases consistent look up and renaming if 
-*           required.
-*
-*/  
-AuthorlistIndex.CSS = {
-    'AuthorlistIndex'   : 'AuthorlistIndex',
-    'Detail'            : 'AuthorlistIndexDetail',
-    'DetailLabel'       : 'AuthorlistIndexDetailLabel',
-    'EditLink'          : 'AuthorlistIndexEditLink',
-    'Link'              : 'AuthorlistIndexLink',
-    'Paper'             : 'AuthorlistIndexPaper',
-    'PaperTitle'        : 'AuthorlistIndexPaperTitle',
-    'Seperator'         : 'AuthorlistIndexSeperator',
-    'Timestamp'         : 'AuthorlistIndexTimestamp',
-    'URL'               : 'AuthorlistIndexURL'
-}
-
-
-
-
-
-
-
-
-
-/*
-* Function: AuthorlistIndex
-* Purpose:  Constructor
-* Input(s): string:sId - Id of the html element the AuthorlistIndex will be 
-*                        embedded into (preferably a div).
-* Returns:  AuthorlistIndex instance when called with new, else undefined
-*
-*/
-function AuthorlistIndex( sId ) {
-    this._nParent = jQuery( '#' + sId );
-    this._nParent.addClass( AuthorlistIndex.CSS.AuthorlistIndex );
-    
-    this._fnRetrieve();   
-}
-
-/*
-* Function: _fnCreatePaper
-* Purpose:  Creates a single paper record node based on the data passed in the 
-*           oPaper object. 
-* Input(s): string:sLabel - label string
-*           string:sDetail - the detail string
-* Returns:  node:nWrapper - the paper detail node
-*
-*/
-AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
-    var self = this;
-
-    var nClone = jQuery( '<a>' );
-    nClone.html( 'Clone' );
-    nClone.addClass( AuthorlistIndex.CSS.EditLink );
-    nClone.click( function( event ) {
-        jQuery.ajax( {
-            'type'    : 'POST',
-            'url'     : Authorlist.URLS.Clone + '&id=' + sId,
-            'success' : function( oData ) {
-                console.log( oData );
-                nParent.parent().prepend( self._fnCreatePaper( oData ) );
-            }
-        } );
-        return false;
-    } );
-    
-    var nSeperator = jQuery( '<span>' );
-    nSeperator.addClass( AuthorlistIndex.CSS.Seperator );
-    
-    var nDelete = jQuery( '<a>' );
-    nDelete.html( 'Delete' );
-    nDelete.addClass( AuthorlistIndex.CSS.EditLink );
-    nDelete.click( function() {
-        jQuery.ajax( {
-            'type'    : 'POST',
-            'url'     : Authorlist.URLS.Delete + '&id=' + sId,
-            'success' : function() {
-                nParent.remove();
-            }
-        } );
-        return false;
-    } );
-    
-    nParent.append( nClone, nSeperator, nDelete );
-}
-
-/*
-* Function: _fnCreatePaper
-* Purpose:  Creates a single paper record node based on the data passed in the 
-*           oPaper object. 
-* Input(s): string:sLabel - label string
-*           string:sDetail - the detail string
-* Returns:  node:nWrapper - the paper detail node
-*
-*/
-AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
-    var nPaper = jQuery( '<div>' ).addClass( AuthorlistIndex.CSS.Paper );
-    var sURL = Authorlist.URLS.Open + '&id=' + oPaper.paper_id;
-    var oTime = new Date( oPaper.last_modified * AuthorlistIndex.TO_MILLIS );
-    var sTime = oTime.toLocaleDateString() + ' ' + oTime.toLocaleTimeString();
-    
-    // create the link
-    var nLink = jQuery( '<a>' );
-    nLink.attr( 'href', sURL );
-    nLink.html( oPaper.paper_title );
-    nLink.addClass( AuthorlistIndex.CSS.PaperTitle );
-    
-    // create the time stamp
-    var nTimestamp = jQuery( '<span>' );
-    nTimestamp.html( 'Last Modified: ' + sTime );
-    nTimestamp.addClass( AuthorlistIndex.CSS.Timestamp );
-    
-    // create link label
-    var nURL = jQuery( '<span>' )
-    nURL.html( sURL );
-    nURL.addClass( AuthorlistIndex.CSS.URL );
-    
-    // add the information
-    nPaper.append( nLink, nTimestamp );
-    
-    // present collaboration/experiment number only if present
-    if ( oPaper.collaboration ) {
-        var sLabel = 'Collaboration:';
-        var sCollaboration = oPaper.collaboration
-        nPaper.append( this._fnCreatePaperDetail( sLabel, sCollaboration ) );
-    }
-    if ( oPaper.experiment_number ) {
-        var sLabel = 'Experiment Number:';
-        var sExperiment = oPaper.experiment_number;
-        nPaper.append( this._fnCreatePaperDetail( sLabel, sExperiment ) );
-    }
-    
-    // add the link as last item
-    nPaper.append( nURL );
-    this._fnCreateEditLinks( nPaper, oPaper.paper_id );
-    
-    return nPaper;
-}
-
-/*
-* Function: _fnCreatePaperDetail
-* Purpose:  Creates a paper detail consisting of a label as defined in the 
-*           string sLabel with the values sDetail
-* Input(s): string:sLabel - label string
-*           string:sDetail - the detail string
-* Returns:  node:nWrapper - the paper detail node
-*
-*/
-AuthorlistIndex.prototype._fnCreatePaperDetail = function( sLabel, sDetail ) {
-    var nWrapper = jQuery( '<div>' );
-    var nLabel = jQuery( '<span>' ).html( sLabel );
-    var nDetail = jQuery( '<span>' ).html( sDetail );
-    
-    nLabel.addClass( AuthorlistIndex.CSS.DetailLabel );
-    nDetail.addClass( AuthorlistIndex.CSS.Detail );
-    nWrapper.append( nLabel, nDetail );
-    
-    return nWrapper;
-}
-
-/*
-* Function: _fnDisplay
-* Purpose:  Displays each of the passed papers in the oData object on the 
-*           nParent element.
-* Input(s): object:oData - the object containing all papers
-*           node:nParent - the element to display the papers on
-* Returns:  void
-*
-*/
-AuthorlistIndex.prototype._fnDisplay = function( oData, nParent ) {
-    var oPapers = oData.data;
-    var nPapers = jQuery( '<div>' );
-    
-    for ( var i = 0, iLen = oPapers.length; i < iLen; i++ ) {
-        var nPaper = this._fnCreatePaper( oPapers[ i ] );
-        nPapers.append( nPaper );
-    }
-    nPapers.appendTo( nParent );
-}
-
-/*
-* Function: _fnRetrieve
-* Purpose:  Retrieves all available papers from the database and displays them 
-*           nicely on the webpage on success.
-* Input(s): void
-* Returns:  void
-*
-*/
-AuthorlistIndex.prototype._fnRetrieve = function() {
-    var self = this;
-
-    jQuery.ajax( {
-        'type'    : 'GET',
-        'url'     : Authorlist.URLS.Itemize,
-        'success' : function( oData ) {
-            self._fnDisplay( oData, self._nParent );
-        }
-    } );
-}
-
-
-
-
-
-
-
-
-
-/*
 * Variable: Authorlist.CSS
 * Purpose:  Central enumeration and mapping for the CSS classes used in the 
 *           Authorlist prototype. Eases consistent look up and renaming if 
@@ -364,7 +145,6 @@ function Authorlist( sId ) {
     this._oAffiliations = this._fnCreateAffiliations( this._nParent );
     this._nFootnotes = this._fnCreateFootnotes( this._nParent );
     this._nMenu = this._fnCreateMenu( this._nParent );
-    //this._nControlPanel = this._fnCreateControlPanel( this._nParent );
         
     this._fnRetrieve( this._sId );
 }
@@ -433,6 +213,14 @@ Authorlist.prototype.fnValidate = function( oData ) {
     return asErrors;
 }
 
+/*
+* Function: _fnBackToMainPage
+* Purpose:  Invoking this function sends the user immediately back to the main 
+*           page. All unchanged state is lost.
+* Input(s): void
+* Returns:  void
+*
+*/
 Authorlist.prototype._fnBackToMainPage = function() {
         window.location.href = Authorlist.URLS.MainPage;
 }
@@ -562,36 +350,6 @@ Authorlist.prototype._fnCreateButton = function( nParent, sLabel, sIcon) {
     return nButton;
 }
 
-/*
-* Function: _fnCreateControlPanel
-* Purpose:  Creates the bar in the end, containing all the control buttons, like
-*           save or export.
-* Input(s): node:nParent - the node to append the panel to
-* Returns:  void
-*
-*/
-Authorlist.prototype._fnCreateControlPanel = function( nParent ) {
-    var nControlPanel = jQuery( '<div>' );
-    this._fnCreateHeadline( nControlPanel, '' );
-    
-    var nSave = this._fnCreateButton( nControlPanel, 'Save', Authorlist.CSS.SaveIcon );
-    nSave.addClass( Authorlist.CSS.Save );
-    var nAuthorsXML = this._fnCreateButton( nControlPanel, 'AuthorsXML', Authorlist.CSS.Export);
-    var nLatex = this._fnCreateButton( nControlPanel, 'LaTeX', Authorlist.CSS.Export);
-    nParent.append( nControlPanel );
-    
-    var self = this;
-    // Register safe callback
-    nSave.click( function( event ) {
-        self._fnSave();
-    } );
-    // Register export callbacks
-    var sSelector = 'button:not(.' + Authorlist.CSS.Save + ')'
-    jQuery( nControlPanel ).delegate( sSelector, 'click', function() {
-        self._fnExport( this );
-    } );
-}
-
 
 /*
 * Function: _fnCreateFootnotes
@@ -670,6 +428,7 @@ Authorlist.prototype._fnCreateMenu = function( nParent ) {
     nMenu.attr( 'id', Authorlist.CSS.Menu );
     nParent.append( nMenu );
     
+    // Create separator
     this._fnCreateHeadline( nMenu, '' );
     
     // Create buttons
@@ -723,6 +482,15 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
     return new Paper( Authorlist.CSS. Paper );
 }
 
+/*
+* Function: _fnDelete
+* Purpose:  Deletes the currently open sheet completely from the database. There
+*           is no backup copy or safety net. Sends the user on success back to 
+*           the main page.
+* Input(s): void
+* Returns:  void.
+*
+*/
 Authorlist.prototype._fnDelete = function() {
     var self = this;
     
@@ -1032,6 +800,285 @@ Authorlist.prototype._fnValidateUmbrellas = function( aaoAffiliations, asAcronym
         sInvalidError += '<strong>' + asInvalidUmbrellas.join( ',' ) + '</strong>';
         asErrors.push( sInvalidError );
     }
+}
+
+
+
+
+
+
+
+
+
+/*
+
+* Variable: AuthorlistIndex.TO_MILLIS
+* Purpose:  Factor to convert seconds timestamp to milliseconds
+*
+*/
+AuthorlistIndex.TO_MILLIS = 1000;
+
+/*
+* Variable: AuthorlistIndex.CSS
+* Purpose:  Central enumeration and mapping for the CSS classes used in the 
+*           AuthorlistIndex prototype. Eases consistent look up and renaming if 
+*           required.
+
+*
+*/  
+AuthorlistIndex.CSS = {
+    'AuthorlistIndex'   : 'AuthorlistIndex',
+    'Detail'            : 'AuthorlistIndexDetail',
+    'DetailLabel'       : 'AuthorlistIndexDetailLabel',
+    'EditLink'          : 'AuthorlistIndexEditLink',
+    'Link'              : 'AuthorlistIndexLink',
+    'Paper'             : 'AuthorlistIndexPaper',
+    'PaperTitle'        : 'AuthorlistIndexPaperTitle',
+    'New'               : 'AuthorlistIndexNew',
+    'NewIcon'           : 'ui-icon-document',
+    'Seperator'         : 'AuthorlistIndexSeperator',
+    'Timestamp'         : 'AuthorlistIndexTimestamp',
+    'URL'               : 'AuthorlistIndexURL'
+}
+
+
+
+
+
+
+
+
+
+/*
+
+* Function: AuthorlistIndex
+* Purpose:  Constructor
+* Input(s): string:sId - Id of the html element the AuthorlistIndex will be 
+*                        embedded into (preferably a div).
+* Returns:  AuthorlistIndex instance when called with new, else undefined
+*
+
+*/
+function AuthorlistIndex( sId ) {
+    this._nParent = jQuery( '#' + sId );
+    this._nParent.addClass( AuthorlistIndex.CSS.AuthorlistIndex );
+    
+    this._fnRetrieve( this._nParent );
+}
+
+AuthorlistIndex.prototype._fnCreateButton = Authorlist.prototype._fnCreateButton
+
+/*
+* Function: _fnCreatePaper
+* Purpose:  Creates a single paper record node based on the data passed in the 
+*           oPaper object. 
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+*/
+AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
+    var self = this;
+
+    var nClone = jQuery( '<a>' );
+    nClone.html( 'Clone' );
+    nClone.addClass( AuthorlistIndex.CSS.EditLink );
+    nClone.click( function( event ) {
+        jQuery.ajax( {
+            'type'    : 'POST',
+            'url'     : Authorlist.URLS.Clone + '&id=' + sId,
+            'success' : function( oData ) {
+                console.log( oData );
+                nParent.parent().prepend( self._fnCreatePaper( oData ) );
+            }
+        } );
+        return false;
+    } );
+    
+    var nSeperator = jQuery( '<span>' );
+    nSeperator.addClass( AuthorlistIndex.CSS.Seperator );
+    
+    var nDelete = jQuery( '<a>' );
+    nDelete.html( 'Delete' );
+    nDelete.addClass( AuthorlistIndex.CSS.EditLink );
+    nDelete.click( function() {
+        jQuery.ajax( {
+            'type'    : 'POST',
+            'url'     : Authorlist.URLS.Delete + '&id=' + sId,
+            'success' : function() {
+                var nContainer = nParent.parent();
+                nParent.remove();
+                
+                var nPapers = nContainer.find('.' + AuthorlistIndex.CSS.Paper);
+                // Container becomes empty? Display that there are no records
+                if ( nPapers.length === 0 ) {
+                    self._fnDisplayEmptyDatabase( nContainer );
+                }
+            }
+        } );
+        return false;
+    } );
+    
+    nParent.append( nClone, nSeperator, nDelete );
+}
+
+/*
+* Function: _fnCreateNewButton
+* Purpose:  Creates the new button that allows users to create a new document. 
+*           Refers the user to a clean new sheet. The button is placed on the 
+*           passed parent element.
+* Input(s): node:nParent - the parent node
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnCreateNewButton = function( nParent ) {
+    var nNewButton = this._fnCreateButton( nParent, 'New', 
+                                           AuthorlistIndex.CSS.NewIcon );
+                                           
+    nNewButton.addClass( AuthorlistIndex.CSS.New );
+    nNewButton.click( function() {
+        window.location.href = Authorlist.URLS.Open;
+    } );
+    nNewButton.appendTo( nParent );
+}
+
+/*
+* Function: _fnCreatePaper
+* Purpose:  Creates a single paper record node based on the data passed in the 
+*           oPaper object. 
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+*/
+AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
+    var nPaper = jQuery( '<div>' ).addClass( AuthorlistIndex.CSS.Paper );
+    var sURL = Authorlist.URLS.Open + '&id=' + oPaper.paper_id;
+    var oTime = new Date( oPaper.last_modified * AuthorlistIndex.TO_MILLIS );
+    var sTime = oTime.toLocaleDateString() + ' ' + oTime.toLocaleTimeString();
+    
+    // create the link
+    var nLink = jQuery( '<a>' );
+    nLink.attr( 'href', sURL );
+    nLink.html( oPaper.paper_title );
+    nLink.addClass( AuthorlistIndex.CSS.PaperTitle );
+    
+    // create the time stamp
+    var nTimestamp = jQuery( '<span>' );
+    nTimestamp.html( 'Last Modified: ' + sTime );
+    nTimestamp.addClass( AuthorlistIndex.CSS.Timestamp );
+    
+    // create link label
+    var nURL = jQuery( '<span>' )
+    nURL.html( sURL );
+    nURL.addClass( AuthorlistIndex.CSS.URL );
+    
+    // add the information
+    nPaper.append( nLink, nTimestamp );
+    
+    // present collaboration/experiment number only if present
+    if ( oPaper.collaboration ) {
+        var sLabel = 'Collaboration:';
+        var sCollaboration = oPaper.collaboration
+        nPaper.append( this._fnCreatePaperDetail( sLabel, sCollaboration ) );
+    }
+    if ( oPaper.experiment_number ) {
+        var sLabel = 'Experiment Number:';
+        var sExperiment = oPaper.experiment_number;
+        nPaper.append( this._fnCreatePaperDetail( sLabel, sExperiment ) );
+    }
+    
+    // add the link as last item
+    nPaper.append( nURL );
+    this._fnCreateEditLinks( nPaper, oPaper.paper_id );
+    
+    return nPaper;
+}
+
+/*
+* Function: _fnCreatePaperDetail
+* Purpose:  Creates a paper detail consisting of a label as defined in the 
+*           string sLabel with the values sDetail
+* Input(s): string:sLabel - label string
+*           string:sDetail - the detail string
+* Returns:  node:nWrapper - the paper detail node
+*
+
+*/
+AuthorlistIndex.prototype._fnCreatePaperDetail = function( sLabel, sDetail ) {
+    var nWrapper = jQuery( '<div>' );
+    var nLabel = jQuery( '<span>' ).html( sLabel );
+    var nDetail = jQuery( '<span>' ).html( sDetail );
+    
+    nLabel.addClass( AuthorlistIndex.CSS.DetailLabel );
+    nDetail.addClass( AuthorlistIndex.CSS.Detail );
+    nWrapper.append( nLabel, nDetail );
+    
+    return nWrapper;
+}
+
+/*
+* Function: _fnDisplay
+* Purpose:  Displays each of the passed papers in the oData object on the 
+*           nParent element.
+* Input(s): object:oData - the object containing all papers
+*           node:nParent - the element to display the papers on
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnDisplay = function( oData, nParent ) {
+    var oPapers = oData.data;
+    
+    // No records available? Display a short note telling this
+    if ( oPapers.length === 0 ) {
+        this._fnDisplayEmptyDatabase( nParent );
+        return
+    }
+    
+    // Records available? Display them
+    var nPapers = jQuery( '<div>' );
+    for ( var i = 0, iLen = oPapers.length; i < iLen; i++ ) {
+        var nPaper = this._fnCreatePaper( oPapers[ i ] );
+        nPapers.append( nPaper );
+    }
+    nPapers.appendTo( nParent );
+}
+
+/*
+* Function: _fnDisplayEmptyDatabase
+* Purpose:  Gives a short note to the user that there are no records in the 
+*           database and therefore nothing else can be displayed.
+* Input(s): node:nParent - the node indicating where to display the message
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnDisplayEmptyDatabase = function( nParent ) {
+    var nEmpty = jQuery( '<div>' );
+
+    nEmpty.html( 'No records in the database.' );
+    nEmpty.addClass( AuthorlistIndex.CSS.Paper );
+    nEmpty.appendTo( nParent );
+}
+
+/*
+* Function: _fnRetrieve
+* Purpose:  Retrieves all available papers from the database and displays them 
+*           nicely on the webpage on success.
+* Input(s): node:nParent - the parent element where to display the records
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnRetrieve = function( nParent ) {
+    var self = this;
+
+    jQuery.ajax( {
+        'type'    : 'GET',
+        'url'     : Authorlist.URLS.Itemize,
+        'success' : function( oData ) {
+            self._fnDisplay( oData, nParent );
+            self._fnCreateNewButton( nParent );
+        }
+    } );
 }
 
 

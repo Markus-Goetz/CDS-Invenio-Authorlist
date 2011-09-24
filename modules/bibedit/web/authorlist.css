@@ -2,6 +2,14 @@
 * AuthorlistIndex definitions
 *
 */
+div.AuthorlistIndex {
+    margin-top : 70px;
+}
+
+button.AuthorlistIndexNew {
+    margin-left : 0px !important;
+}
+
 div.AuthorlistIndexPaper {
     margin-bottom : 10px;
     padding-bottom : 10px;
