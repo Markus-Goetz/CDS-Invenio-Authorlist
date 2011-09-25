@@ -273,9 +273,12 @@ Authorlist.prototype._fnConfirm = function( fnCallback ) {
     // Instantiate a jQuery UI dialog widget
     nDialog.dialog( {
         'resizable'   : false,
-        'title'       : 'Confirm',
+//        'title'       : 'Confirm',
         'dialogClass' : Authorlist.CSS.Dialog,
-        'minHeight'   : 0,
+        'minWidth'    : 'auto',
+        'width'       : 'auto',
+        'minHeight'   : 118,
+        'height'      : 118,
         'buttons'     : {
             'Yes' : function() { jQuery( this ).remove(); fnBound(); },
             'No'  : function() { jQuery( this ).remove(); }
