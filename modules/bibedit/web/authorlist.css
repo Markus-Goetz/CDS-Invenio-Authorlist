@@ -1,3 +1,15 @@
+body.AuthorlistProgress {
+    cursor : progress;
+}
+
+div.AuthorlistLoading {
+    position : fixed;
+    top : 0;
+    left : 50%;
+    margin-top : -1px;
+    padding : 3px 30px 0px 30px;
+}
+
 /*
 * AuthorlistIndex definitions
 *

@@ -26,6 +26,12 @@ Array.prototype.remove = function( value ) {
 *
 */
 Authorlist.CSS = {
+    // Body classes
+    'Active'            : 'ui-state-active',
+    'Loading'           : 'AuthorlistLoading',
+    'Progress'          : 'AuthorlistProgress',
+    
+
     // Section classes
     'Affiliations'      : 'AuthorlistAffiliations',
     'Authors'           : 'AuthorlistAuthors',
@@ -68,6 +74,15 @@ Authorlist.CSS = {
     'ErrorTitle'        : 'AuthorlistErrorTitle',
     'Icon'              : 'ui-icon'
 }
+
+/*
+* Variable: Authorlist.DEFAULT_ERROR
+* Purpose:  Default error text for unsuccessful AJAX requests.
+*
+*/
+Authorlist.DEFAULT_ERROR = [ 'Site is currently not reachable',
+                             'Please try again later',
+                             'Contact the site administrator' ];
 
 /*
 * Variable: Authorlist.EMPTY
@@ -222,7 +237,8 @@ Authorlist.prototype.fnValidate = function( oData ) {
 *
 */
 Authorlist.prototype._fnBackToMainPage = function() {
-        window.location.href = Authorlist.URLS.MainPage;
+    this._fnProgress();
+    window.location.href = Authorlist.URLS.MainPage;
 }
 
 /*
@@ -486,7 +502,7 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
 * Function: _fnDelete
 * Purpose:  Deletes the currently open sheet completely from the database. There
 *           is no backup copy or safety net. Sends the user on success back to 
-*           the main page.
+*           the main page or shows an error on failure.
 * Input(s): void
 * Returns:  void.
 *
@@ -494,11 +510,22 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
 Authorlist.prototype._fnDelete = function() {
     var self = this;
     
+    // Indicate that we are working
+    this._fnProgress();
+    
     jQuery.ajax( {
         'type'    : 'POST',
         'url'     : Authorlist.URLS.Delete + '&id=' + self._sId,
         'success' : function() {
+            // Remove the working status and go back to the main page
+            self._fnProgressDone();
             self._fnBackToMainPage();
+        },
+        'error'   : function() {
+            // We are done with progressing and should display some errors.
+            var sPreamble = 'An error occured while deleting the sheet:';
+            self._fnProgressDone();
+            self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
         }
     } );
 }
@@ -531,7 +558,7 @@ Authorlist.prototype._fnExport = function( nButton ) {
         nForm.remove();
         
     } else {
-        this._fnShowErrors( asErrors );
+        this._fnShowErrors( 'The following problems prevent exporting:', asErrors );
     }
 }
 
@@ -547,6 +574,34 @@ Authorlist.prototype._fnGetId = function() {
     return idMatch === null ? null : idMatch[ 1 ];
 }
 
+Authorlist.prototype._fnProgress = function() {
+    var nBody = jQuery( 'body' );
+    var nLoading = jQuery( '<div>' );
+    
+    nLoading.html( 'Loading...' );
+    nLoading.addClass( Authorlist.CSS.Loading );
+    nLoading.addClass( Authorlist.CSS.Active );
+    nLoading.appendTo( nBody );
+    nLoading.css( 'margin-left', -1 * nLoading.outerWidth() / 2 );
+    
+    nBody.addClass( Authorlist.CSS.Progress );
+}
+
+/*
+* Function: _fnProgressDone
+* Purpose:  Remove the progressing cursor from the body and the loading bar on 
+*           the upper 
+* Input(s): string:sId - the paper id to be loaded
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnProgressDone = function() {
+    var nBody = jQuery( 'body' );
+    
+    nBody.removeClass( Authorlist.CSS.Progress );
+    nBody.find( '.' + Authorlist.CSS.Loading ).remove();
+}
+
 /*
 * Function: _fnRetrieve
 * Purpose:  Retrieves the data of the given paper id from the server an sets 
@@ -560,12 +615,18 @@ Authorlist.prototype._fnRetrieve = function( sId ) {
     var self = this;
     var sURL = Authorlist.URLS.Load + ( sId !== null ? '&id=' + sId : '');
     
-    // TODO: error
+    this._fnProgress();
     jQuery.ajax( {
         'type'    : 'GET',
         'url'     : sURL,
         'success' : function( oData ) {
             self.fnLoadData( oData );
+            self._fnProgressDone();
+        },
+        'error'   : function() {
+            var sPreamble = 'Could not retrieve data from server:';
+            self._fnProgressDone();
+            self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
         }
     } );
 }
@@ -588,18 +649,25 @@ Authorlist.prototype._fnSave = function() {
         // Append the id of this sheet to the save URL if present
         sURL += this._sId !== null ? '&id=' + this._sId : '';
         
+        this._fnProgress();
         // Post the data to the server and save the new id on success
         jQuery.ajax( {
-            'type' : 'POST',
-            'url'  : sURL,
-            'data' : { 'data' : JSON.stringify( oData ) },
+            'type'    : 'POST',
+            'url'     : sURL,
+            'data'    : { 'data' : JSON.stringify( oData ) },
             'success' : function( oData ) {
+                self._fnProgressDone();
                 self._sId = oData.paper_id;
+            },
+            'error'   : function() {
+                var sPreamble = 'Could not save data on the server:';
+                self._fnProgressDone();
+                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
             }
         } );
     // Errors present? Better display them an do not save
     } else {
-        this._fnShowErrors( asErrors );
+        this._fnShowErrors( 'The following errors prevent saving:', asErrors );
     }
 }
 
@@ -611,11 +679,12 @@ Authorlist.prototype._fnSave = function() {
 * Returns:  void
 *
 */
-Authorlist.prototype._fnShowErrors = function( asErrors ) {
+Authorlist.prototype._fnShowErrors = function( sPreamble, asErrors ) {
     var nDialog = jQuery( '<div>' );
     var nError = jQuery( '<p>' );
     var nErrorIcon = jQuery( '<span>' );
-    var nErrorText = jQuery( '<span>The following errors prevent saving:</span>' );
+    var nErrorText = jQuery( '<span>' );
+    nErrorText.html( sPreamble );
     
     // Add CSS classes
     nDialog.addClass( Authorlist.CSS.Error );
@@ -880,40 +949,55 @@ AuthorlistIndex.prototype._fnCreateButton = Authorlist.prototype._fnCreateButton
 AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
     var self = this;
 
+    // Clone link
     var nClone = jQuery( '<a>' );
     nClone.html( 'Clone' );
     nClone.addClass( AuthorlistIndex.CSS.EditLink );
     nClone.click( function( event ) {
+        // Go into progress mode
+        self._fnProgress();
+    
+        // Make a request to clone the paper and display it, or show errors
         jQuery.ajax( {
             'type'    : 'POST',
             'url'     : Authorlist.URLS.Clone + '&id=' + sId,
             'success' : function( oData ) {
-                console.log( oData );
-                nParent.parent().prepend( self._fnCreatePaper( oData ) );
+                self._fnProgressDone();
+                self._fnDisplayClonedPaper( nParent, oData );
+            },
+            'error'   : function() {
+                var sPreamble = 'Could not clone paper:';
+                self._fnProgressDone();
+                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
             }
         } );
         return false;
     } );
     
+    // Small cube to separate both links
     var nSeperator = jQuery( '<span>' );
     nSeperator.addClass( AuthorlistIndex.CSS.Seperator );
     
+    // Delete link
     var nDelete = jQuery( '<a>' );
     nDelete.html( 'Delete' );
     nDelete.addClass( AuthorlistIndex.CSS.EditLink );
     nDelete.click( function() {
+        // Go into progress mode
+        self._fnProgress();
+        
+        // Make request to delete the paper and update view or display errors.
         jQuery.ajax( {
             'type'    : 'POST',
             'url'     : Authorlist.URLS.Delete + '&id=' + sId,
             'success' : function() {
-                var nContainer = nParent.parent();
-                nParent.remove();
-                
-                var nPapers = nContainer.find('.' + AuthorlistIndex.CSS.Paper);
-                // Container becomes empty? Display that there are no records
-                if ( nPapers.length === 0 ) {
-                    self._fnDisplayEmptyDatabase( nContainer );
-                }
+                self._fnProgressDone();
+                self._fnRemovePaper( nParent );
+            },
+            'error'   : function() {
+                var sPreamble = 'Could not delete paper:';
+                self._fnProgressDone();
+                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
             }
         } );
         return false;
@@ -932,11 +1016,13 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
 *
 */
 AuthorlistIndex.prototype._fnCreateNewButton = function( nParent ) {
+    var self = this;
     var nNewButton = this._fnCreateButton( nParent, 'New', 
                                            AuthorlistIndex.CSS.NewIcon );
                                            
     nNewButton.addClass( AuthorlistIndex.CSS.New );
     nNewButton.click( function() {
+        self._fnProgress();
         window.location.href = Authorlist.URLS.Open;
     } );
     nNewButton.appendTo( nParent );
@@ -1045,6 +1131,20 @@ AuthorlistIndex.prototype._fnDisplay = function( oData, nParent ) {
 }
 
 /*
+* Function: _fnDisplayClonedPaper
+* Purpose:  Displays a new paper that is added to the list of all papers on the 
+*           front page
+* Input(s): node:nParent - the node containing the to be cloned paper
+*           object:oData - the data of the newly cloned paper
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnDisplayClonedPaper = function( nParent, oData ) {
+    var nContainer = nParent.parent();
+    nContainer.prepend( this._fnCreatePaper( oData ) );
+}
+
+/*
 * Function: _fnDisplayEmptyDatabase
 * Purpose:  Gives a short note to the user that there are no records in the 
 *           database and therefore nothing else can be displayed.
@@ -1061,6 +1161,32 @@ AuthorlistIndex.prototype._fnDisplayEmptyDatabase = function( nParent ) {
 }
 
 /*
+* Functions: _fnProgress and _fnProgressDone
+* Purpose:   Method to display standard loading indicators like authorlist does.
+*            Look up these methods there please.
+*
+*/
+AuthorlistIndex.prototype._fnProgress = Authorlist.prototype._fnProgress
+AuthorlistIndex.prototype._fnProgressDone = Authorlist.prototype._fnProgressDone
+
+/*
+* Function: _fnRemovePaper
+* Purpose:  Removes a paper from the list of all papers on the landing page.
+* Input(s): node:nParent - the individual paper container
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnRemovePaper = function( nParent ) {
+    var nContainer = nParent.parent();
+    nParent.remove();
+    var nPapers = nContainer.find('.' + AuthorlistIndex.CSS.Paper);
+    // Container becomes empty? Display that there are no records
+    if ( nPapers.length === 0 ) {
+        this._fnDisplayEmptyDatabase( nContainer );
+    }
+}
+
+/*
 * Function: _fnRetrieve
 * Purpose:  Retrieves all available papers from the database and displays them 
 *           nicely on the webpage on success.
@@ -1071,15 +1197,30 @@ AuthorlistIndex.prototype._fnDisplayEmptyDatabase = function( nParent ) {
 AuthorlistIndex.prototype._fnRetrieve = function( nParent ) {
     var self = this;
 
+    this._fnProgress();
     jQuery.ajax( {
         'type'    : 'GET',
         'url'     : Authorlist.URLS.Itemize,
         'success' : function( oData ) {
+            self._fnProgressDone();
             self._fnDisplay( oData, nParent );
             self._fnCreateNewButton( nParent );
+        },
+        'error'   : function() {
+            var sPreamble = 'Cannot display all papers:'
+            self._fnProgressDone();
+            self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
         }
     } );
 }
+
+/*
+* Function: _fnShowErrors
+* Purpose:  Method to display standard errors. We are doing the same as author-
+*           list would do here, so please look it up there
+*
+*/
+AuthorlistIndex.prototype._fnShowErrors = Authorlist.prototype._fnShowErrors
 
 
 
