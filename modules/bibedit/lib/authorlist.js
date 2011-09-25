@@ -68,6 +68,9 @@ Authorlist.CSS = {
     'Bullet'            : 'AuthorlistBullet',
     'BulletIcon'        : 'ui-icon-carat-1-e',
     'BulletText'        : 'AuthorlistBulletText',
+    'Confirmation'      : 'ui-state-highlight',
+    'ConfirmationIcon'  : 'ui-icon-info',
+    'ConfirmationTitle' : 'AuthorlistConfirmationTitle',
     'Dialog'            : 'AuthorlistDialog',
     'Error'             : 'ui-state-error',
     'ErrorIcon'         : 'ui-icon-alert',
@@ -239,6 +242,45 @@ Authorlist.prototype.fnValidate = function( oData ) {
 Authorlist.prototype._fnBackToMainPage = function() {
     this._fnProgress();
     window.location.href = Authorlist.URLS.MainPage;
+}
+
+/*
+* Function: _fnConfirm
+* Purpose:  Opens up a pop-up asking the user to confirm the action. If the user
+*           clicks no, nothing happens, otherwise the passed callback is called.
+* Input(s): function:fnCallback - the confirmed callback
+* Returns:  void
+*
+*/
+Authorlist.prototype._fnConfirm = function( fnCallback ) {
+    var nDialog = jQuery( '<div>' );
+    var nConfirmation = jQuery( '<p>' );
+    var nConfirmationIcon = jQuery( '<span>' );
+    var nConfirmationText = jQuery( '<span>' );
+    var fnBound = fnCallback.bind( this );
+    
+    // Add items to dialog and apply style through classes
+    nConfirmationText.html( 'Are you sure you want to proceed?' );
+    nDialog.addClass( Authorlist.CSS.Confirmation );
+    nConfirmation.addClass( Authorlist.CSS.ConfirmationTitle );
+    nConfirmationIcon.addClass( Authorlist.CSS.Icon );
+    nConfirmationIcon.addClass( Authorlist.CSS.ConfirmationIcon );
+    
+    // Add elements to the DOM
+    nDialog.append( nConfirmation.append(nConfirmationIcon, nConfirmationText));
+    nDialog.appendTo( jQuery( 'body' ) );
+    
+    // Instantiate a jQuery UI dialog widget
+    nDialog.dialog( {
+        'resizable'   : false,
+        'title'       : 'Confirm',
+        'dialogClass' : Authorlist.CSS.Dialog,
+        'minHeight'   : 0,
+        'buttons'     : {
+            'Yes' : function() { jQuery( this ).remove(); fnBound(); },
+            'No'  : function() { jQuery( this ).remove(); }
+        }
+    } );
 }
 
 /*
@@ -471,7 +513,7 @@ Authorlist.prototype._fnCreateMenu = function( nParent ) {
     } );  
       
     nDeleteButton.click( function() {
-        self._fnDelete();
+        self._fnConfirm( self._fnDelete );
     } );
     
     jQuery( nMenu ).delegate( '.' + Authorlist.CSS.Export, 'click', function() {
@@ -509,7 +551,6 @@ Authorlist.prototype._fnCreatePaper = function( nParent ) {
 */
 Authorlist.prototype._fnDelete = function() {
     var self = this;
-    
     // Indicate that we are working
     this._fnProgress();
     
@@ -935,7 +976,39 @@ function AuthorlistIndex( sId ) {
     this._fnRetrieve( this._nParent );
 }
 
+AuthorlistIndex.prototype._fnConfirm = Authorlist.prototype._fnConfirm
 AuthorlistIndex.prototype._fnCreateButton = Authorlist.prototype._fnCreateButton
+
+/*
+* Function: _fnCloneClicked
+* Purpose:  Defines the callback for clicking on a clone link on a respective 
+*           paper container. Sends a request to the server to clone the paper 
+*           and displays it in the list on success or outputs an error.
+* Input(s): node:nParent - the paper container of the clicked clone link
+*           string:sId - the id of the clicked paper
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnCloneClicked = function( nPaper, sId ) {
+    var self = this;
+
+    // Go into progress mode
+    this._fnProgress();
+    // Make a request to clone the paper and display it, or show errors
+    jQuery.ajax( {
+        'type'    : 'POST',
+        'url'     : Authorlist.URLS.Clone + '&id=' + sId,
+        'success' : function( oData ) {
+            self._fnProgressDone();
+            self._fnDisplayClonedPaper( nPaper, oData );
+        },
+        'error'   : function() {
+            var sPreamble = 'Could not clone paper:';
+            self._fnProgressDone();
+            self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
+        }
+    } );
+}
 
 /*
 * Function: _fnCreatePaper
@@ -953,26 +1026,7 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
     var nClone = jQuery( '<a>' );
     nClone.html( 'Clone' );
     nClone.addClass( AuthorlistIndex.CSS.EditLink );
-    nClone.click( function( event ) {
-        // Go into progress mode
-        self._fnProgress();
-    
-        // Make a request to clone the paper and display it, or show errors
-        jQuery.ajax( {
-            'type'    : 'POST',
-            'url'     : Authorlist.URLS.Clone + '&id=' + sId,
-            'success' : function( oData ) {
-                self._fnProgressDone();
-                self._fnDisplayClonedPaper( nParent, oData );
-            },
-            'error'   : function() {
-                var sPreamble = 'Could not clone paper:';
-                self._fnProgressDone();
-                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
-            }
-        } );
-        return false;
-    } );
+    nClone.click( function() { self._fnCloneClicked( nParent, sId ) } );
     
     // Small cube to separate both links
     var nSeperator = jQuery( '<span>' );
@@ -982,26 +1036,7 @@ AuthorlistIndex.prototype._fnCreateEditLinks = function( nParent, sId ) {
     var nDelete = jQuery( '<a>' );
     nDelete.html( 'Delete' );
     nDelete.addClass( AuthorlistIndex.CSS.EditLink );
-    nDelete.click( function() {
-        // Go into progress mode
-        self._fnProgress();
-        
-        // Make request to delete the paper and update view or display errors.
-        jQuery.ajax( {
-            'type'    : 'POST',
-            'url'     : Authorlist.URLS.Delete + '&id=' + sId,
-            'success' : function() {
-                self._fnProgressDone();
-                self._fnRemovePaper( nParent );
-            },
-            'error'   : function() {
-                var sPreamble = 'Could not delete paper:';
-                self._fnProgressDone();
-                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
-            }
-        } );
-        return false;
-    } );
+    nDelete.click( function() { self._fnDeleteClicked( nParent, sId ) } );
     
     nParent.append( nClone, nSeperator, nDelete );
 }
@@ -1038,6 +1073,7 @@ AuthorlistIndex.prototype._fnCreateNewButton = function( nParent ) {
 *
 */
 AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
+    var self = this;
     var nPaper = jQuery( '<div>' ).addClass( AuthorlistIndex.CSS.Paper );
     var sURL = Authorlist.URLS.Open + '&id=' + oPaper.paper_id;
     var oTime = new Date( oPaper.last_modified * AuthorlistIndex.TO_MILLIS );
@@ -1048,6 +1084,7 @@ AuthorlistIndex.prototype._fnCreatePaper = function( oPaper ) {
     nLink.attr( 'href', sURL );
     nLink.html( oPaper.paper_title );
     nLink.addClass( AuthorlistIndex.CSS.PaperTitle );
+    nLink.click( function() { self._fnProgress() } );
     
     // create the time stamp
     var nTimestamp = jQuery( '<span>' );
@@ -1101,6 +1138,42 @@ AuthorlistIndex.prototype._fnCreatePaperDetail = function( sLabel, sDetail ) {
     nWrapper.append( nLabel, nDetail );
     
     return nWrapper;
+}
+
+/*
+* Function: _fnDeleteClicked
+* Purpose:  Defines the callback for clicking a delete link. On confirmation by 
+*           the user a request is sent a request to the server to delete the 
+*           paper. Afterwards the paper is removed from the list of all papers. 
+*           If an error occurs during the communication an error message is 
+*           displayed instead.
+* Input(s): node:nParent - the paper container where the delete link was clicked
+*           string:sId - the id of the clicked paper
+* Returns:  void
+*
+*/
+AuthorlistIndex.prototype._fnDeleteClicked = function( nPaper, sId ) {
+    var self = this;
+
+    this._fnConfirm( function() {
+        // Go into progress mode
+        self._fnProgress();
+        
+        // Make request to delete the paper and update view or display errors.
+        jQuery.ajax( {
+            'type'    : 'POST',
+            'url'     : Authorlist.URLS.Delete + '&id=' + sId,
+            'success' : function() {
+                self._fnProgressDone();
+                self._fnRemovePaper( nPaper );
+            },
+            'error'   : function() {
+                var sPreamble = 'Could not delete paper:';
+                self._fnProgressDone();
+                self._fnShowErrors( sPreamble, Authorlist.DEFAULT_ERROR );
+            }
+        } );
+    } );
 }
 
 /*

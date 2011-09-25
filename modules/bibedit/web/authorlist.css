@@ -166,12 +166,25 @@ div.AuthorlistDialog button {
     margin : 0px !important;
 }
 
+div.AuthorlistDialog button:not(:first-child) {
+    margin-left : 10px !important;
+}
+
 div.AuthorlistDialog .ui-icon {
     float : left;
 }
 
 span.ui-icon.ui-icon-alert {
     margin-right : 5px;
+}
+
+span.ui-icon.ui-icon-info {
+    margin-right : 5px;
+}
+
+p.AuthorlistConfirmationTitle {
+    font-weight : bold;
+    margin-bottom : -15px;
 }
 
 p.AuthorlistErrorTitle {
