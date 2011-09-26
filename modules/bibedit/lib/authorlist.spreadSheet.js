@@ -111,10 +111,9 @@ SpreadSheet.Column = function( oInit ) {
 * Returns:  integer:iCompare - the javascript-style comparison value
 *
 */
-SpreadSheet.Column.prototype.fnCompare = function( oA, oB, self ) {
-    if ( typeof self === 'undefined' ) self = this;
-    var a = self.fnValue( oA );
-    var b = self.fnValue( oB );
+SpreadSheet.Column.prototype.fnCompare = function( oA, oB ) {
+    var a = this.fnValue( oA );
+    var b = this.fnValue( oB );
     
     if ( this.bExtendable ) {
         a = a.toString();
@@ -361,11 +360,7 @@ SpreadSheet.Column.prototype._fnCreateExtendable = function() {
 *
 */
 SpreadSheet.Column.prototype._fnMakeAscendingSorting = function() {
-    var self = this;
-    
-    return function( a, b ) {
-        return self.fnCompare( a, b, self );
-    }
+    return this.fnCompare.bind( this );
 }
 
 /*
@@ -377,11 +372,8 @@ SpreadSheet.Column.prototype._fnMakeAscendingSorting = function() {
 *
 */
 SpreadSheet.Column.prototype._fnMakeDescendingSorting = function() {
-    var self = this;
-    
-    return function( a, b ) {
-        return -1 * self.fnCompare( a, b, self );
-    }
+    var fnBoundCompare = this.fnCompare.bind( this );
+    return function( a, b ) { return -1 * fnBoundCompare( a, b ); }
 }
 
 /*
