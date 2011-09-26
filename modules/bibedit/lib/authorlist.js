@@ -497,14 +497,12 @@ Authorlist.prototype._fnCreateMenu = function( nParent ) {
     var nSave = this._fnCreateButton( nMenu, 'Save', Authorlist.CSS.SaveIcon );
     var nDeleteButton = this._fnCreateButton( nMenu, 'Delete', Authorlist.CSS.DeleteIcon );
     var nAuthorsXML = this._fnCreateButton( nMenu, 'AuthorsXML', Authorlist.CSS.ExportIcon );
-    var nLatex = this._fnCreateButton( nMenu, 'LaTeX', Authorlist.CSS.ExportIcon );
     
     // Add classes   
     nBackButton.addClass( Authorlist.CSS.Back );
     nSave.addClass( Authorlist.CSS.Save );
     nDeleteButton.addClass( Authorlist.CSS.Delete );
     nAuthorsXML.addClass( Authorlist.CSS.Export );
-    nLatex.addClass( Authorlist.CSS.Export );
     
     // Register callbacks for the buttons
     nBackButton.click( function() {
