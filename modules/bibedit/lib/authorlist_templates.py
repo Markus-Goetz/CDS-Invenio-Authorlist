@@ -59,7 +59,7 @@ class Template:
                %s
                <script>
                   jQuery( document ).ready( function() {   
-                      var authorlist = new Authorlist( 'authorlist' );
+                      authorlist = new Authorlist( 'authorlist' );
                   } );
                </script>
                """ %  (self.stylesheets(), self.scripts())

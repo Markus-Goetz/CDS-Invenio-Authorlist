@@ -133,6 +133,7 @@ Authorlist.URLS = {
     'Load'              : '/record/edit/authorlist?state=load',
     'MainPage'          : '/record/edit/authorlist',
     'Open'              : '/record/edit/authorlist?state=open',
+    'Record'            : '/record/edit/authorlist?state=record',
     'Save'              : '/record/edit/authorlist?state=save'
 }
 
@@ -497,12 +498,14 @@ Authorlist.prototype._fnCreateMenu = function( nParent ) {
     var nSave = this._fnCreateButton( nMenu, 'Save', Authorlist.CSS.SaveIcon );
     var nDeleteButton = this._fnCreateButton( nMenu, 'Delete', Authorlist.CSS.DeleteIcon );
     var nAuthorsXML = this._fnCreateButton( nMenu, 'AuthorsXML', Authorlist.CSS.ExportIcon );
+    var nRecord = this._fnCreateButton( nMenu, 'Record', Authorlist.CSS.ExportIcon );
     
     // Add classes   
     nBackButton.addClass( Authorlist.CSS.Back );
     nSave.addClass( Authorlist.CSS.Save );
     nDeleteButton.addClass( Authorlist.CSS.Delete );
     nAuthorsXML.addClass( Authorlist.CSS.Export );
+    nRecord.addClass( Authorlist.CSS.Export );
     
     // Register callbacks for the buttons
     nBackButton.click( function() {
@@ -1416,6 +1419,7 @@ Paper.prototype._fnCreateButtons = function( nParent ) {
         nParent.children().last().remove();
     } );
 }
+
 
 /*
 * Function: _fnCreateInput
